@@ -1,0 +1,10 @@
+{
+  "contributor_id": "test_user_001",
+  "task": "Pick up the red mug from the table",
+  "task_category": "pick_place",
+  "environment": "kitchen",
+  "environment_id": "env_test_001",
+  "duration_ms": 5000,
+  "kit_version": "v1",
+  "capture_date": "2026-02-20T14:00:00"
+}

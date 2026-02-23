@@ -1,21 +1,55 @@
-# Large binary files
-*.r3d
-*.mp4
-*.task
-*.pt
-*.pth
-*.onnx
-*.bin
+# Secrets & credentials
+.env
+*.env
+.env.*
+secrets/
+credentials/
 
-# Data outputs
-r3d_output/
-lerobot_dataset/
+# OpenClaw state (contains tokens)
+.openclaw/
+
+# Memory files (private)
+memory/
+MEMORY.md
+USER.md
+IDENTITY.md
+
+# Tool outputs with potential secrets
+tools/semantic_index.npz
+tools/semantic_meta.json
+tools/last_yt_analysis.json
+tools/outreach-crm.json
+
+# Media & temp
+media/
+temp_*
+*.tmp
+*.bak
+
+# Node
+node_modules/
+package-lock.json
 
 # Python
 __pycache__/
 *.pyc
-.env
+.venv/
+venv/
+
+# Vercel
+.vercel/
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Test outputs
+test_output/
+pipeline/test_output/
+pipeline/test_data/real_video/frames/
+
+# Mission control data (auto-generated, may contain infra details)
+mission-control/data.js
+mission-control/data.json
+mission-control/heartbeat-history.json
