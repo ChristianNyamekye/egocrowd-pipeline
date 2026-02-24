@@ -1,0 +1,39 @@
+{
+  "neutral_pose_joints": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "camera_intrinsics": {
+    "fx": 1500,
+    "fy": 1500,
+    "cx": 960,
+    "cy": 540
+  },
+  "sensor_offsets": {
+    "watch_to_wrist_cm": [
+      0,
+      -2,
+      0
+    ],
+    "glove_calibrated": true
+  }
+}
