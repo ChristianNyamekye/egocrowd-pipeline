@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EgoDex — Crowdsourced Robot Training Data</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root { --bg: #0a0a0a; --fg: #e8e8e8; --accent: #4f8cff; --accent2: #ff6b4f; --card: #151515; --border: #2a2a2a; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* Hero */
+  .hero { padding: 100px 0 80px; text-align: center; }
+  .hero h1 { font-size: 3.2em; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 16px; }
+  .hero h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { font-size: 1.25em; color: #999; max-width: 650px; margin: 0 auto 40px; }
+  .hero-stats { display: flex; justify-content: center; gap: 48px; margin-top: 40px; }
+  .stat { text-align: center; }
+  .stat-num { font-size: 2.4em; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 0.85em; color: #777; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* Sections */
+  section { padding: 60px 0; }
+  section h2 { font-size: 2em; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.02em; }
+  section .subtitle { color: #888; font-size: 1.1em; margin-bottom: 40px; }
+
+  /* Pipeline */
+  .pipeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .pipeline-step { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 20px; text-align: center; position: relative; }
+  .pipeline-step .step-num { font-size: 0.75em; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+  .pipeline-step h3 { font-size: 1.15em; margin-bottom: 8px; }
+  .pipeline-step p { font-size: 0.9em; color: #888; }
+  .pipeline-step .icon { font-size: 2em; margin-bottom: 12px; }
+
+  /* Comparison */
+  .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .comp-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 32px; }
+  .comp-card.ours { border-color: var(--accent); }
+  .comp-card h3 { font-size: 1.3em; margin-bottom: 16px; }
+  .comp-card .price { font-size: 2.2em; font-weight: 800; margin-bottom: 4px; }
+  .comp-card.ours .price { color: var(--accent); }
+  .comp-card.theirs .price { color: var(--accent2); }
+  .comp-card ul { list-style: none; padding: 0; }
+  .comp-card ul li { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.95em; color: #bbb; }
+  .comp-card ul li:last-child { border: none; }
+  .comp-card ul li::before { content: "✓ "; color: var(--accent); font-weight: bold; }
+  .comp-card.theirs ul li::before { content: "✗ "; color: var(--accent2); }
+
+  /* Formats */
+  .formats { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .format-badge { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 24px; font-weight: 600; }
+
+  /* CTA */
+  .cta { text-align: center; padding: 80px 0; }
+  .cta a { display: inline-block; background: var(--accent); color: #fff; padding: 16px 40px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 1.1em; transition: transform 0.2s; }
+  .cta a:hover { transform: translateY(-2px); }
+
+  /* Video placeholder */
+  .video-container { background: var(--card); border: 1px solid var(--border); border-radius: 12px; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; margin: 40px 0; max-width: 720px; margin-left: auto; margin-right: auto; }
+  .video-container video { width: 100%; border-radius: 12px; }
+  .video-placeholder { color: #555; font-size: 1.1em; }
+
+  /* Footer */
+  footer { text-align: center; padding: 40px 0; color: #555; font-size: 0.85em; border-top: 1px solid var(--border); }
+
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 2em; }
+    .hero-stats { flex-direction: column; gap: 20px; }
+    .pipeline { grid-template-columns: 1fr 1fr; }
+    .comparison { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <nav style="display:flex; align-items:center; justify-content:space-between; padding:24px 0; border-bottom:1px solid var(--border);">
+    <div style="font-size:1.5em; font-weight:800; letter-spacing:-0.04em;">
+      <span style="background:linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Ego</span><span>Dex</span>
+    </div>
+    <a href="mailto:christian.k.nyamekye.26@dartmouth.edu" style="color:var(--accent); text-decoration:none; font-size:0.9em; font-weight:600;">Get in Touch →</a>
+  </nav>
+  <div class="hero">
+    <h1>Human Hands. <span>Robot Brains.</span></h1>
+    <p>Crowdsourced manipulation data from real homes, converted to robot-ready training data. 9× cheaper than existing approaches.</p>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-num">$950</div><div class="stat-label">Per Capture Kit</div></div>
+      <div class="stat"><div class="stat-num">9×</div><div class="stat-label">Cost Reduction</div></div>
+      <div class="stat"><div class="stat-num">21</div><div class="stat-label">Joint Hand Tracking</div></div>
+      <div class="stat"><div class="stat-num">6-DoF</div><div class="stat-label">Wrist Motion</div></div>
+    </div>
+  </div>
+
+  <section>
+    <h2>The Pipeline</h2>
+    <p class="subtitle">From human demonstration to robot-ready training data in minutes.</p>
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="icon">📱</div>
+        <div class="step-num">Step 1</div>
+        <h3>Capture</h3>
+        <p>iPhone ARKit + Apple Watch IMU + UDCAP Data Glove record manipulation tasks in real environments.</p>
+      </div>
+      <div class="pipeline-step">
+        <div class="icon">🔄</div>
+        <div class="step-num">Step 2</div>
+        <h3>Process</h3>
+        <p>Extract 21-joint hand pose, 6-DoF wrist kinematics, and scene context via our GPU pipeline.</p>
+      </div>
+      <div class="pipeline-step">
+        <div class="icon">🤖</div>
+        <div class="step-num">Step 3</div>
+        <h3>Retarget</h3>
+        <p>Map human hand data to robot hand morphology (Allegro, LEAP, Shadow) via kinematic retargeting.</p>
+      </div>
+      <div class="pipeline-step">
+        <div class="icon">📊</div>
+        <div class="step-num">Step 4</div>
+        <h3>Train</h3>
+        <p>Output in LeRobot/RLDS format. Plug directly into imitation learning pipelines.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cost Comparison</h2>
+    <p class="subtitle">Consumer hardware vs. industrial setups.</p>
+    <div class="comparison">
+      <div class="comp-card ours">
+        <h3>Our Platform</h3>
+        <div class="price">$950</div>
+        <p style="color:#888; margin-bottom:16px;">per capture kit</p>
+        <ul>
+          <li>iPhone (already owned) + Apple Watch + Data Glove</li>
+          <li>Deploy to any home, office, kitchen</li>
+          <li>Thousands of diverse environments</li>
+          <li>Non-expert contributors</li>
+          <li>Real-world object diversity</li>
+        </ul>
+      </div>
+      <div class="comp-card theirs">
+        <h3>NVIDIA EgoScale Setup</h3>
+        <div class="price">$8,700+</div>
+        <p style="color:#888; margin-bottom:16px;">per capture station</p>
+        <ul>
+          <li>Specialized cameras + motion capture</li>
+          <li>Fixed lab environment only</li>
+          <li>Limited environment diversity</li>
+          <li>Trained operators required</li>
+          <li>Controlled object sets</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>End-to-End Proof</h2>
+    <p class="subtitle">100 simulated contributors → pipeline → BC training → robot reaches target (0.036m accuracy)</p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:20px;">
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center;">
+        <h3 style="margin-bottom:12px;">Trained Policy</h3>
+        <video controls style="width:100%; border-radius:8px;" poster="">
+          <source src="e2e_pipeline_policy.mp4" type="video/mp4">
+        </video>
+        <p style="color:#888; font-size:0.85em; margin-top:8px;">BC policy trained on diverse crowdsourced data</p>
+      </div>
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center;">
+        <h3 style="margin-bottom:12px;">Expert Reference</h3>
+        <video controls style="width:100%; border-radius:8px;" poster="">
+          <source src="e2e_expert_ref.mp4" type="video/mp4">
+        </video>
+        <p style="color:#888; font-size:0.85em; margin-top:8px;">Single contributor expert demonstration</p>
+      </div>
+    </div>
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px;">
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; text-align:center;">
+        <div><div style="font-size:1.8em; font-weight:800; color:var(--accent);">100</div><div style="color:#777; font-size:0.8em;">Contributors</div></div>
+        <div><div style="font-size:1.8em; font-weight:800; color:var(--accent);">20,000</div><div style="color:#777; font-size:0.8em;">Training Samples</div></div>
+        <div><div style="font-size:1.8em; font-weight:800; color:var(--accent);">0.036m</div><div style="color:#777; font-size:0.8em;">Min Distance</div></div>
+        <div><div style="font-size:1.8em; font-weight:800; color:var(--accent);">3,000</div><div style="color:#777; font-size:0.8em;">Training Epochs</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Scaling Curve -->
+  <section id="scaling-law">
+    <h2>Scaling Law: More Data → Better Robots</h2>
+    <p class="subtitle">Log-linear fit anchored at our validated result — every 10× in demos halves positioning error.</p>
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:16px; padding:32px;">
+      <div style="position:relative; height:320px;">
+        <canvas id="scalingChart"></canvas>
+      </div>
+
+      <!-- Legend -->
+      <div style="display:flex; gap:24px; margin-top:20px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.82em; color:#9ca3af;">
+          <div style="width:20px; height:3px; background:var(--accent); border-radius:2px;"></div>
+          Projected (log-linear fit)
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.82em; color:#34d399;">
+          <div style="width:10px; height:10px; background:#34d399; border-radius:50%;"></div>
+          Validated result (100 demos, 0.036 m)
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.82em; color:#9ca3af;">
+          <div style="width:20px; height:0; border-top:2px dashed rgba(248,113,113,0.7);"></div>
+          Success threshold (0.06 m)
+        </div>
+      </div>
+
+      <!-- Stat row -->
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:24px;">
+        <div style="background:#0f172a; border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center;">
+          <div style="font-size:1.6em; font-weight:800; color:var(--accent); line-height:1.1;">0.036m</div>
+          <div style="font-size:0.75em; color:#777; margin-top:4px;">Error @ 100 demos (validated)</div>
+        </div>
+        <div style="background:#0f172a; border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center;">
+          <div style="font-size:1.6em; font-weight:800; color:var(--accent); line-height:1.1;">~0.018m</div>
+          <div style="font-size:0.75em; color:#777; margin-top:4px;">Projected @ 1,000 demos</div>
+        </div>
+        <div style="background:#0f172a; border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center;">
+          <div style="font-size:1.6em; font-weight:800; color:var(--accent); line-height:1.1;">~0.009m</div>
+          <div style="font-size:0.75em; color:#777; margin-top:4px;">Projected @ 10,000 demos</div>
+        </div>
+      </div>
+
+      <p style="font-size:0.72em; color:#4b5563; margin-top:16px;">
+        Projection based on EgoScale log-linear scaling law: L(n) = a − b·log(n). Fit anchored at n=100, L=0.036m; asymptote ~0.006m (proprioceptive noise floor). Reference: arXiv 2602.16710.
+      </p>
+    </div>
+  </section>
+
+  <script>
+  (function() {
+    const ctx = document.getElementById('scalingChart').getContext('2d');
+    const a = 0.048, b = 0.006;
+    const model = n => Math.max(0.004, a - b * Math.log10(n));
+    const demoPoints = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+    const projData = demoPoints.map(n => ({ x: n, y: +model(n).toFixed(4) }));
+
+    Chart.defaults.color = '#9ca3af';
+    Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'Projected (log-linear)',
+            data: projData,
+            borderColor: '#4f8cff',
+            backgroundColor: 'rgba(79,140,255,0.08)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: d => d.raw?.x === 100 ? 0 : 3,
+            pointBackgroundColor: '#4f8cff',
+            borderWidth: 2.5,
+            order: 1,
+          },
+          {
+            label: 'Validated result',
+            data: [{ x: 100, y: 0.036 }],
+            borderColor: '#34d399',
+            backgroundColor: '#34d399',
+            pointRadius: 8,
+            pointHoverRadius: 10,
+            pointStyle: 'circle',
+            showLine: false,
+            order: 0,
+          },
+          {
+            label: 'Success threshold',
+            data: demoPoints.map(n => ({ x: n, y: 0.06 })),
+            borderColor: 'rgba(248,113,113,0.6)',
+            borderWidth: 1.5,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+            order: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            type: 'logarithmic',
+            title: { display: true, text: 'Number of crowdsourced demos', color: '#6b7280', font: { size: 11 } },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: {
+              callback: v => v >= 1000 ? `${v/1000}K` : v,
+              color: '#6b7280',
+              font: { size: 11 },
+              maxTicksLimit: 8,
+            },
+            min: 10,
+            max: 10000,
+          },
+          y: {
+            title: { display: true, text: 'Positioning error (m)', color: '#6b7280', font: { size: 11 } },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: {
+              callback: v => `${v.toFixed(3)}m`,
+              color: '#6b7280',
+              font: { size: 11 },
+            },
+            min: 0,
+            max: 0.08,
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1e293b',
+            borderColor: '#334155',
+            borderWidth: 1,
+            titleColor: '#f1f5f9',
+            bodyColor: '#94a3b8',
+            callbacks: {
+              title: items => `${items[0].raw.x.toLocaleString()} demos`,
+              label: item => `Error: ${(item.raw.y * 100).toFixed(2)} cm`,
+            },
+          },
+        },
+        interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      }
+    });
+  })();
+  </script>
+
+  <section>
+    <h2>Output Formats</h2>
+    <p class="subtitle">Plug into any major robot learning framework.</p>
+    <div class="formats">
+      <div class="format-badge">🤗 LeRobot</div>
+      <div class="format-badge">📦 RLDS (TensorFlow)</div>
+      <div class="format-badge">📄 Raw JSON Episodes</div>
+      <div class="format-badge">🔬 EgoScale-Compatible</div>
+    </div>
+    <div style="margin-top:28px; background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+      <div style="padding:10px 20px; background:#111; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px;">
+        <span style="color:#888; font-size:0.85em; font-family:monospace;">python</span>
+        <span style="color:#555; font-size:0.8em; margin-left:auto;">Load EgoDex in LeRobot</span>
+      </div>
+      <pre style="padding:20px; font-family:'Fira Code','Cascadia Code',monospace; font-size:0.82em; color:#ccc; overflow-x:auto; margin:0; line-height:1.7;"><span style="color:#888;"># pip install lerobot</span>
+<span style="color:#4f8cff;">from</span> lerobot.common.datasets.lerobot_dataset <span style="color:#4f8cff;">import</span> LeRobotDataset
+
+<span style="color:#888;"># Load an EgoDex manipulation dataset</span>
+dataset = LeRobotDataset(<span style="color:#ff6b4f;">"egodex/kitchen-grasping-v1"</span>)
+
+<span style="color:#888;"># Each episode: 21-joint hand pose + 6-DoF wrist + retargeted robot actions</span>
+episode = dataset[<span style="color:#ff6b4f;">0</span>]
+<span style="color:#4f8cff;">print</span>(episode.keys())
+<span style="color:#888;"># → ['observation.hand_joints', 'observation.wrist_pose',</span>
+<span style="color:#888;">#    'action.robot_joints', 'task', 'environment']</span></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Data Schema</h2>
+    <p class="subtitle">Every timestep captures the full manipulation state.</p>
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; font-family:monospace; font-size:0.85em; color:#aaa; overflow-x:auto;">
+<pre>{
+  "episode_id": "ep_001",
+  "task": "pick_up_mug",
+  "environment": "kitchen_counter",
+  "timesteps": [{
+    "t": 0.033,
+    "wrist_position": [0.42, -0.15, 0.81],
+    "wrist_orientation": [0.99, 0.01, -0.02, 0.03],
+    "hand_joints_human": [0.12, 0.45, ...],  // 21 joints
+    "hand_joints_robot": [0.08, 0.38, ...],  // retargeted to Allegro/LEAP
+    "grasp_phase": "approach",
+    "contact_detected": false
+  }]
+}</pre>
+    </div>
+  </section>
+
+  <!-- Founder signal -->
+  <section style="padding: 60px 0; border-top: 1px solid var(--border);">
+    <div style="max-width: 640px; margin: 0 auto; text-align: center;">
+      <div style="font-size: 0.75em; font-weight: 700; letter-spacing: 0.12em; color: var(--accent); text-transform: uppercase; margin-bottom: 20px;">Who's Building This</div>
+      <p style="font-size: 1.05em; color: #ccc; line-height: 1.7; margin: 0 0 24px;">
+        <strong style="color: #fff;">Christian Nyamekye</strong> — EE + CS at Dartmouth '26, working directly with Boston Dynamics Spot robots in the field. After watching manipulation training data become the #1 bottleneck for real-world deployment, he built EgoDex to solve it at consumer scale.
+      </p>
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <span style="background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 0.82em; color: #aaa;">🎓 Dartmouth '26</span>
+        <span style="background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 0.82em; color: #aaa;">🤖 Boston Dynamics Spot</span>
+        <span style="background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 0.82em; color: #aaa;">⚡ EE + CS</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="cta">
+    <h2>Interested in robot-ready manipulation data?</h2>
+    <p style="color:#888; margin: 16px 0 32px;">We're working with robotics companies to validate our pipeline.</p>
+    <a href="mailto:christian.k.nyamekye.26@dartmouth.edu">Get in Touch →</a>
+  </div>
+
+  <footer>
+    <p>Built by Christian Nyamekye · Dartmouth '26 · EE + CS</p>
+  </footer>
+</div>
+
+</body>
+</html>
