@@ -1,0 +1,151 @@
+
+<mujoco model="dexcrowd_arm_v2">
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="RK4"/>
+  
+  <visual>
+    <headlight diffuse="0.8 0.8 0.8" ambient="0.3 0.3 0.3" specular="0.1 0.1 0.1"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="130" elevation="-20"/>
+  </visual>
+  
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.25 0.25 0.28" rgb2="0.35 0.35 0.38"
+             width="512" height="512"/>
+    <material name="grid_mat" texture="grid" texrepeat="4 4" reflectance="0.1"/>
+    <material name="arm_mat"  rgba="0.2 0.5 0.9 1"/>
+    <material name="hand_mat" rgba="0.3 0.7 0.5 1"/>
+    <material name="target_mat" rgba="1.0 0.4 0.1 1"/>
+    <material name="table_mat" rgba="0.55 0.40 0.30 1"/>
+  </asset>
+  
+  <worldbody>
+    <!-- Ground plane -->
+    <geom type="plane" size="3 3 0.1" material="grid_mat"/>
+    
+    <!-- Table -->
+    <body name="table" pos="0.55 0 0.4">
+      <geom type="box" size="0.25 0.3 0.02" material="table_mat"/>
+    </body>
+    
+    <!-- Target object (cube to pick) -->
+    <body name="target_cube" pos="0.48 0.0 0.43">
+      <geom type="box" size="0.03 0.03 0.03" material="target_mat" mass="0.05"/>
+    </body>
+    
+    <!-- Robot arm base -->
+    <body name="base" pos="0 0 0.6">
+      <geom type="cylinder" size="0.06 0.05" rgba="0.3 0.3 0.35 1"/>
+      
+      <!-- Shoulder pan -->
+      <body name="shoulder" pos="0 0 0.05">
+        <joint name="shoulder_pan" type="hinge" axis="0 0 1" range="-2.0 2.0" damping="2.0"/>
+        <geom type="cylinder" size="0.05 0.04" rgba="0.25 0.45 0.85 1"/>
+        
+        <!-- Upper arm -->
+        <body name="upper_arm" pos="0 0 0.04">
+          <joint name="shoulder_lift" type="hinge" axis="0 1 0" range="-1.6 0.8" damping="2.0"/>
+          <geom type="capsule" size="0.035" fromto="0 0 0 0 0 0.28" material="arm_mat"/>
+          
+          <!-- Elbow -->
+          <body name="forearm" pos="0 0 0.28">
+            <joint name="elbow" type="hinge" axis="0 1 0" range="0.0 2.2" damping="1.5"/>
+            <geom type="capsule" size="0.03" fromto="0 0 0 0 0 0.24" material="arm_mat"/>
+            
+            <!-- Wrist -->
+            <body name="wrist" pos="0 0 0.24">
+              <joint name="wrist_roll" type="hinge" axis="0 0 1" range="-1.8 1.8" damping="0.8"/>
+              <geom type="capsule" size="0.025" fromto="0 0 0 0.04 0 0.08" material="arm_mat"/>
+              
+              <!-- Palm -->
+              <body name="palm" pos="0.04 0 0.08">
+                <geom type="box" size="0.04 0.025 0.015" material="hand_mat"/>
+                
+                <!-- Index finger -->
+                <body name="index_base" pos="0.035 0.015 0">
+                  <joint name="index_j0" type="hinge" axis="0 1 0" range="-0.1 1.5" damping="0.3"/>
+                  <geom type="capsule" size="0.008" fromto="0 0 0 0 0 0.03" material="hand_mat"/>
+                  <body name="index_mid" pos="0 0 0.03">
+                    <joint name="index_j1" type="hinge" axis="0 1 0" range="-0.1 1.5" damping="0.2"/>
+                    <geom type="capsule" size="0.007" fromto="0 0 0 0 0 0.025" material="hand_mat"/>
+                    <body name="index_tip" pos="0 0 0.025">
+                      <joint name="index_j2" type="hinge" axis="0 1 0" range="-0.1 1.3" damping="0.15"/>
+                      <geom type="capsule" size="0.006" fromto="0 0 0 0 0 0.02" material="hand_mat"/>
+                    </body>
+                  </body>
+                </body>
+                
+                <!-- Middle finger -->
+                <body name="middle_base" pos="0.035 0 0">
+                  <joint name="middle_j0" type="hinge" axis="0 1 0" range="-0.1 1.5" damping="0.3"/>
+                  <geom type="capsule" size="0.008" fromto="0 0 0 0 0 0.032" material="hand_mat"/>
+                  <body name="middle_mid" pos="0 0 0.032">
+                    <joint name="middle_j1" type="hinge" axis="0 1 0" range="-0.1 1.5" damping="0.2"/>
+                    <geom type="capsule" size="0.007" fromto="0 0 0 0 0 0.027" material="hand_mat"/>
+                    <body name="middle_tip" pos="0 0 0.027">
+                      <joint name="middle_j2" type="hinge" axis="0 1 0" range="-0.1 1.3" damping="0.15"/>
+                      <geom type="capsule" size="0.006" fromto="0 0 0 0 0 0.022" material="hand_mat"/>
+                    </body>
+                  </body>
+                </body>
+                
+                <!-- Ring finger -->
+                <body name="ring_base" pos="0.035 -0.015 0">
+                  <joint name="ring_j0" type="hinge" axis="0 1 0" range="-0.1 1.5" damping="0.3"/>
+                  <geom type="capsule" size="0.008" fromto="0 0 0 0 0 0.028" material="hand_mat"/>
+                  <body name="ring_mid" pos="0 0 0.028">
+                    <joint name="ring_j1" type="hinge" axis="0 1 0" range="-0.1 1.5" damping="0.2"/>
+                    <geom type="capsule" size="0.007" fromto="0 0 0 0 0 0.023" material="hand_mat"/>
+                    <body name="ring_tip" pos="0 0 0.023">
+                      <joint name="ring_j2" type="hinge" axis="0 1 0" range="-0.1 1.3" damping="0.15"/>
+                      <geom type="capsule" size="0.006" fromto="0 0 0 0 0 0.019" material="hand_mat"/>
+                    </body>
+                  </body>
+                </body>
+                
+                <!-- Thumb -->
+                <body name="thumb_base" pos="-0.02 -0.03 0">
+                  <joint name="thumb_j0" type="hinge" axis="1 0 0" range="-0.5 1.2" damping="0.3"/>
+                  <geom type="capsule" size="0.009" fromto="0 0 0 0 -0.025 0.025" material="hand_mat"/>
+                  <body name="thumb_mid" pos="0 -0.025 0.025">
+                    <joint name="thumb_j1" type="hinge" axis="0 1 0" range="-0.1 1.4" damping="0.2"/>
+                    <geom type="capsule" size="0.008" fromto="0 0 0 0 0 0.025" material="hand_mat"/>
+                    <body name="thumb_tip" pos="0 0 0.025">
+                      <joint name="thumb_j2" type="hinge" axis="0 1 0" range="-0.1 1.2" damping="0.15"/>
+                      <geom type="capsule" size="0.007" fromto="0 0 0 0 0 0.02" material="hand_mat"/>
+                    </body>
+                  </body>
+                </body>
+                
+              </body><!-- palm -->
+            </body><!-- wrist -->
+          </body><!-- forearm -->
+        </body><!-- upper_arm -->
+      </body><!-- shoulder -->
+    </body><!-- base -->
+  </worldbody>
+  
+  <actuator>
+    <!-- Arm joints — tuned for visible motion without instability -->
+    <position name="act_shoulder_pan"  joint="shoulder_pan"  kp="100" kv="20" ctrlrange="-2.0 2.0"/>
+    <position name="act_shoulder_lift" joint="shoulder_lift" kp="100" kv="20" ctrlrange="-1.6 0.8"/>
+    <position name="act_elbow"         joint="elbow"         kp="80"  kv="16" ctrlrange="0.0 2.2"/>
+    <position name="act_wrist_roll"    joint="wrist_roll"    kp="50"  kv="10" ctrlrange="-1.8 1.8"/>
+    <!-- Hand joints -->
+    <position name="act_index_j0"   joint="index_j0"   kp="40" kv="4"  ctrlrange="-0.1 1.5"/>
+    <position name="act_index_j1"   joint="index_j1"   kp="30" kv="3"  ctrlrange="-0.1 1.5"/>
+    <position name="act_index_j2"   joint="index_j2"   kp="20" kv="2"  ctrlrange="-0.1 1.3"/>
+    <position name="act_middle_j0"  joint="middle_j0"  kp="40" kv="4"  ctrlrange="-0.1 1.5"/>
+    <position name="act_middle_j1"  joint="middle_j1"  kp="30" kv="3"  ctrlrange="-0.1 1.5"/>
+    <position name="act_middle_j2"  joint="middle_j2"  kp="20" kv="2"  ctrlrange="-0.1 1.3"/>
+    <position name="act_ring_j0"    joint="ring_j0"    kp="35" kv="3.5" ctrlrange="-0.1 1.5"/>
+    <position name="act_ring_j1"    joint="ring_j1"    kp="25" kv="2.5" ctrlrange="-0.1 1.5"/>
+    <position name="act_ring_j2"    joint="ring_j2"    kp="18" kv="1.8" ctrlrange="-0.1 1.3"/>
+    <position name="act_thumb_j0"   joint="thumb_j0"   kp="40" kv="4"  ctrlrange="-0.5 1.2"/>
+    <position name="act_thumb_j1"   joint="thumb_j1"   kp="30" kv="3"  ctrlrange="-0.1 1.4"/>
+    <position name="act_thumb_j2"   joint="thumb_j2"   kp="20" kv="2"  ctrlrange="-0.1 1.2"/>
+  </actuator>
+  
+  <sensor>
+    <framepos name="palm_pos" objtype="body" objname="palm"/>
+  </sensor>
+</mujoco>

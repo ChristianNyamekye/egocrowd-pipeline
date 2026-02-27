@@ -1,0 +1,21 @@
+# Large binary files
+*.r3d
+*.mp4
+*.task
+*.pt
+*.pth
+*.onnx
+*.bin
+
+# Data outputs
+r3d_output/
+lerobot_dataset/
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,368 @@
+[2026-02-24 23:58:03] ======================================================================
+[2026-02-24 23:58:03] DexCrowd End-to-End Pipeline Proof
+[2026-02-24 23:58:03] ======================================================================
+[2026-02-24 23:58:03] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
+[2026-02-24 23:58:03] 
+[2026-02-24 23:58:03] STEP 1: Generating synthetic egocentric video clips...
+[2026-02-24 23:58:12]   Generated 30 clips in 8.6s
+[2026-02-24 23:58:12] 
+[2026-02-24 23:58:12] STEP 2: Extracting hand poses with MediaPipe...
+[2026-02-25 00:00:47] ======================================================================
+[2026-02-25 00:00:47] DexCrowd End-to-End Pipeline Proof
+[2026-02-25 00:00:47] ======================================================================
+[2026-02-25 00:00:47] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
+[2026-02-25 00:00:47] 
+[2026-02-25 00:00:47] STEP 1: Generating synthetic egocentric video clips...
+[2026-02-25 00:00:54]   Generated 30 clips in 7.8s
+[2026-02-25 00:00:54] 
+[2026-02-25 00:00:54] STEP 2: Extracting hand poses with MediaPipe...
+[2026-02-25 00:00:57]   Clip 01/30: clip_000_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:00:58]   Clip 02/30: clip_001_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:00:59]   Clip 03/30: clip_002_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:00:59]   Clip 04/30: clip_003_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:01:00]   Clip 05/30: clip_004_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:01:01]   Clip 06/30: clip_005_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:01:02]   Clip 07/30: clip_006_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:01:03]   Clip 08/30: clip_007_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:01:04]   Clip 09/30: clip_008_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:01:05]   Clip 10/30: clip_009_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:01:06]   Clip 11/30: clip_010_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:01:07]   Clip 12/30: clip_011_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:01:08]   Clip 13/30: clip_012_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:01:09]   Clip 14/30: clip_013_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:01:10]   Clip 15/30: clip_014_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:01:11]   Clip 16/30: clip_015_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:01:12]   Clip 17/30: clip_016_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:01:13]   Clip 18/30: clip_017_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:01:14]   Clip 19/30: clip_018_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:01:15]   Clip 20/30: clip_019_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:01:16]   Clip 21/30: clip_020_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:01:17]   Clip 22/30: clip_021_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:01:18]   Clip 23/30: clip_022_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:01:19]   Clip 24/30: clip_023_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:01:20]   Clip 25/30: clip_024_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:01:21]   Clip 26/30: clip_025_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:01:22]   Clip 27/30: clip_026_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:01:23]   Clip 28/30: clip_027_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:01:24]   Clip 29/30: clip_028_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:01:25]   Clip 30/30: clip_029_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:01:25]   Processed 30 clips in 30.2s
+[2026-02-25 00:01:25]   Average detection rate: 0.0%
+[2026-02-25 00:01:25] 
+[2026-02-25 00:02:03] ======================================================================
+[2026-02-25 00:02:03] DexCrowd End-to-End Pipeline Proof
+[2026-02-25 00:02:03] ======================================================================
+[2026-02-25 00:02:03] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
+[2026-02-25 00:02:03] 
+[2026-02-25 00:02:03] STEP 1: Generating synthetic egocentric video clips...
+[2026-02-25 00:02:10]   Generated 28 synthetic clips in 7.6s
+[2026-02-25 00:02:10]   Found 2 real egocentric cooking videos
+[2026-02-25 00:02:10]   Total clips: 30 (2 real + 28 synthetic)
+[2026-02-25 00:02:10] 
+[2026-02-25 00:02:10] STEP 2: Extracting hand poses with MediaPipe HandLandmarker...
+[2026-02-25 00:02:10]   Model: hand_landmarker.task (float16, MediaPipe 0.10)
+[2026-02-25 00:02:21]   Clip 01/30: pov_cook_sample | 901 frames | detection=20.5%
+[2026-02-25 00:02:26]   Clip 02/30: pov_cook_sample2 | 450 frames | detection=3.8%
+[2026-02-25 00:02:27]   Clip 03/30: clip_000_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:02:28]   Clip 04/30: clip_001_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:02:29]   Clip 05/30: clip_002_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:02:30]   Clip 06/30: clip_003_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:02:31]   Clip 07/30: clip_004_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:02:32]   Clip 08/30: clip_005_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:02:33]   Clip 09/30: clip_006_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:02:34]   Clip 10/30: clip_007_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:02:35]   Clip 11/30: clip_008_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:02:36]   Clip 12/30: clip_009_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:02:37]   Clip 13/30: clip_010_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:02:38]   Clip 14/30: clip_011_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:02:39]   Clip 15/30: clip_012_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:02:40]   Clip 16/30: clip_013_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:02:41]   Clip 17/30: clip_014_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:02:42]   Clip 18/30: clip_015_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:02:43]   Clip 19/30: clip_016_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:02:44]   Clip 20/30: clip_017_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:02:45]   Clip 21/30: clip_018_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:02:46]   Clip 22/30: clip_019_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:02:47]   Clip 23/30: clip_020_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:02:48]   Clip 24/30: clip_021_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:02:49]   Clip 25/30: clip_022_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:02:50]   Clip 26/30: clip_023_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:02:51]   Clip 27/30: clip_024_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:02:52]   Clip 28/30: clip_025_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:02:53]   Clip 29/30: clip_026_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:02:54]   Clip 30/30: clip_027_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:02:54]   Processed 30 clips in 43.2s
+[2026-02-25 00:02:54]   Real video detection rate:    12.2%
+[2026-02-25 00:02:54]   Synthetic video detection:    0.0% (procedural joints used)
+[2026-02-25 00:02:54]   Overall detection rate:       0.8%
+[2026-02-25 00:02:54] 
+[2026-02-25 00:02:54] STEP 3: Retargeting human joints → Allegro + packaging LeRobot/RLDS...
+[2026-02-25 00:02:54]   Packaged 30 episodes, 4711 total frames in 0.3s
+[2026-02-25 00:02:54]   LeRobot dataset: C:\Users\chris\clawd\pipeline\e2e_proof/dataset/lerobot_dataset.json
+[2026-02-25 00:02:54]   RLDS dataset: C:\Users\chris\clawd\pipeline\e2e_proof/dataset/rlds_dataset.json
+[2026-02-25 00:02:54] 
+[2026-02-25 00:02:54] STEP 3b: Saving retargeting visualization...
+[2026-02-25 00:03:15] ======================================================================
+[2026-02-25 00:03:15] DexCrowd End-to-End Pipeline Proof
+[2026-02-25 00:03:15] ======================================================================
+[2026-02-25 00:03:15] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
+[2026-02-25 00:03:15] 
+[2026-02-25 00:03:15] STEP 1: Generating synthetic egocentric video clips...
+[2026-02-25 00:03:22]   Generated 28 synthetic clips in 7.4s
+[2026-02-25 00:03:22]   Found 2 real egocentric cooking videos
+[2026-02-25 00:03:22]   Total clips: 30 (2 real + 28 synthetic)
+[2026-02-25 00:03:22] 
+[2026-02-25 00:03:22] STEP 2: Extracting hand poses with MediaPipe HandLandmarker...
+[2026-02-25 00:03:22]   Model: hand_landmarker.task (float16, MediaPipe 0.10)
+[2026-02-25 00:03:33]   Clip 01/30: pov_cook_sample | 901 frames | detection=20.5%
+[2026-02-25 00:03:37]   Clip 02/30: pov_cook_sample2 | 450 frames | detection=3.8%
+[2026-02-25 00:03:38]   Clip 03/30: clip_000_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:03:39]   Clip 04/30: clip_001_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:03:40]   Clip 05/30: clip_002_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:03:41]   Clip 06/30: clip_003_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:03:42]   Clip 07/30: clip_004_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:03:43]   Clip 08/30: clip_005_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:03:44]   Clip 09/30: clip_006_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:03:45]   Clip 10/30: clip_007_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:03:46]   Clip 11/30: clip_008_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:03:47]   Clip 12/30: clip_009_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:03:48]   Clip 13/30: clip_010_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:03:49]   Clip 14/30: clip_011_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:03:50]   Clip 15/30: clip_012_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:03:51]   Clip 16/30: clip_013_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:03:52]   Clip 17/30: clip_014_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:03:53]   Clip 18/30: clip_015_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:03:54]   Clip 19/30: clip_016_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:03:55]   Clip 20/30: clip_017_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:03:56]   Clip 21/30: clip_018_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:03:57]   Clip 22/30: clip_019_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:03:58]   Clip 23/30: clip_020_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:03:59]   Clip 24/30: clip_021_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:04:00]   Clip 25/30: clip_022_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:04:01]   Clip 26/30: clip_023_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:04:02]   Clip 27/30: clip_024_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:04:02]   Clip 28/30: clip_025_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:04:03]   Clip 29/30: clip_026_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:04:04]   Clip 30/30: clip_027_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:04:04]   Processed 30 clips in 42.2s
+[2026-02-25 00:04:04]   Real video detection rate:    12.2%
+[2026-02-25 00:04:04]   Synthetic video detection:    0.0% (procedural joints used)
+[2026-02-25 00:04:04]   Overall detection rate:       0.8%
+[2026-02-25 00:04:04] 
+[2026-02-25 00:04:04] STEP 3: Retargeting human joints → Allegro + packaging LeRobot/RLDS...
+[2026-02-25 00:04:05]   Packaged 30 episodes, 4711 total frames in 0.3s
+[2026-02-25 00:04:05]   LeRobot dataset: C:\Users\chris\clawd\pipeline\e2e_proof/dataset/lerobot_dataset.json
+[2026-02-25 00:04:05]   RLDS dataset: C:\Users\chris\clawd\pipeline\e2e_proof/dataset/rlds_dataset.json
+[2026-02-25 00:04:05] 
+[2026-02-25 00:04:05] STEP 3b: Saving retargeting visualization...
+[2026-02-25 00:04:05]   Retargeting visualization saved: C:\Users\chris\clawd\pipeline\e2e_proof\retargeting_visualization.png
+[2026-02-25 00:04:05] 
+[2026-02-25 00:04:05] STEP 4: Training Behavioral Cloning policy...
+[2026-02-25 00:04:16]   Training data: 4681 samples, obs_dim=23
+[2026-02-25 00:04:16]   Device: cpu
+[2026-02-25 00:04:28]   Epoch  20/100 | Loss: 0.006906 | LR: 0.000271
+[2026-02-25 00:04:30]   Epoch  40/100 | Loss: 0.004687 | LR: 0.000196
+[2026-02-25 00:04:32]   Epoch  60/100 | Loss: 0.004045 | LR: 0.000104
+[2026-02-25 00:04:33]   Epoch  80/100 | Loss: 0.003672 | LR: 0.000029
+[2026-02-25 00:04:35]   Epoch 100/100 | Loss: 0.003646 | LR: 0.000000
+[2026-02-25 00:04:35]   Model saved: C:\Users\chris\clawd\pipeline\e2e_proof\model\bc_policy.pt
+[2026-02-25 00:04:35]   Final loss: 0.003646
+[2026-02-25 00:04:35]   Training complete in 30.0s
+[2026-02-25 00:04:35]   Training curve saved: C:\Users\chris\clawd\pipeline\e2e_proof\model\training_curve.png
+[2026-02-25 00:04:35] 
+[2026-02-25 00:04:35] STEP 5: MuJoCo simulation rollout...
+[2026-02-25 00:04:35]   MuJoCo model loaded: 23 DoF, 16 actuators
+[2026-02-25 00:04:47] ======================================================================
+[2026-02-25 00:04:47] DexCrowd End-to-End Pipeline Proof
+[2026-02-25 00:04:47] ======================================================================
+[2026-02-25 00:04:47] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
+[2026-02-25 00:04:47] 
+[2026-02-25 00:04:47] STEP 1: Generating synthetic egocentric video clips...
+[2026-02-25 00:04:55]   Generated 28 synthetic clips in 7.4s
+[2026-02-25 00:04:55]   Found 2 real egocentric cooking videos
+[2026-02-25 00:04:55]   Total clips: 30 (2 real + 28 synthetic)
+[2026-02-25 00:04:55] 
+[2026-02-25 00:04:55] STEP 2: Extracting hand poses with MediaPipe HandLandmarker...
+[2026-02-25 00:04:55]   Model: hand_landmarker.task (float16, MediaPipe 0.10)
+[2026-02-25 00:05:05]   Clip 01/30: pov_cook_sample | 901 frames | detection=20.5%
+[2026-02-25 00:05:10]   Clip 02/30: pov_cook_sample2 | 450 frames | detection=3.8%
+[2026-02-25 00:05:11]   Clip 03/30: clip_000_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:05:12]   Clip 04/30: clip_001_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:05:13]   Clip 05/30: clip_002_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:05:14]   Clip 06/30: clip_003_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:05:15]   Clip 07/30: clip_004_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:05:16]   Clip 08/30: clip_005_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:05:17]   Clip 09/30: clip_006_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:05:18]   Clip 10/30: clip_007_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:05:18]   Clip 11/30: clip_008_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:05:19]   Clip 12/30: clip_009_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:05:20]   Clip 13/30: clip_010_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:05:21]   Clip 14/30: clip_011_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:05:22]   Clip 15/30: clip_012_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:05:23]   Clip 16/30: clip_013_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:05:24]   Clip 17/30: clip_014_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:05:25]   Clip 18/30: clip_015_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:05:26]   Clip 19/30: clip_016_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:05:27]   Clip 20/30: clip_017_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:05:28]   Clip 21/30: clip_018_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:05:29]   Clip 22/30: clip_019_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:05:30]   Clip 23/30: clip_020_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:05:31]   Clip 24/30: clip_021_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:05:32]   Clip 25/30: clip_022_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:05:33]   Clip 26/30: clip_023_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:05:34]   Clip 27/30: clip_024_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:05:35]   Clip 28/30: clip_025_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:05:36]   Clip 29/30: clip_026_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:05:37]   Clip 30/30: clip_027_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:05:37]   Processed 30 clips in 42.4s
+[2026-02-25 00:05:37]   Real video detection rate:    12.2%
+[2026-02-25 00:05:37]   Synthetic video detection:    0.0% (procedural joints used)
+[2026-02-25 00:05:37]   Overall detection rate:       0.8%
+[2026-02-25 00:05:37] 
+[2026-02-25 00:05:37] STEP 3: Retargeting human joints → Allegro + packaging LeRobot/RLDS...
+[2026-02-25 00:05:37]   Packaged 30 episodes, 4711 total frames in 0.2s
+[2026-02-25 00:05:37]   LeRobot dataset: C:\Users\chris\clawd\pipeline\e2e_proof/dataset/lerobot_dataset.json
+[2026-02-25 00:05:37]   RLDS dataset: C:\Users\chris\clawd\pipeline\e2e_proof/dataset/rlds_dataset.json
+[2026-02-25 00:05:37] 
+[2026-02-25 00:05:37] STEP 3b: Saving retargeting visualization...
+[2026-02-25 00:05:38]   Retargeting visualization saved: C:\Users\chris\clawd\pipeline\e2e_proof\retargeting_visualization.png
+[2026-02-25 00:05:38] 
+[2026-02-25 00:05:38] STEP 4: Training Behavioral Cloning policy...
+[2026-02-25 00:05:39]   Training data: 4681 samples, obs_dim=23
+[2026-02-25 00:05:39]   Device: cpu
+[2026-02-25 00:05:41]   Epoch  20/100 | Loss: 0.006960 | LR: 0.000271
+[2026-02-25 00:05:43]   Epoch  40/100 | Loss: 0.004716 | LR: 0.000196
+[2026-02-25 00:05:45]   Epoch  60/100 | Loss: 0.004057 | LR: 0.000104
+[2026-02-25 00:05:46]   Epoch  80/100 | Loss: 0.003811 | LR: 0.000029
+[2026-02-25 00:05:48]   Epoch 100/100 | Loss: 0.003729 | LR: 0.000000
+[2026-02-25 00:05:48]   Model saved: C:\Users\chris\clawd\pipeline\e2e_proof\model\bc_policy.pt
+[2026-02-25 00:05:48]   Final loss: 0.003729
+[2026-02-25 00:05:48]   Training complete in 10.2s
+[2026-02-25 00:05:48]   Training curve saved: C:\Users\chris\clawd\pipeline\e2e_proof\model\training_curve.png
+[2026-02-25 00:05:48] 
+[2026-02-25 00:05:48] STEP 5: MuJoCo simulation rollout...
+[2026-02-25 00:05:48]   MuJoCo model loaded: 23 DoF, 16 actuators
+[2026-02-25 00:05:59] ======================================================================
+[2026-02-25 00:05:59] DexCrowd End-to-End Pipeline Proof
+[2026-02-25 00:05:59] ======================================================================
+[2026-02-25 00:05:59] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
+[2026-02-25 00:05:59] 
+[2026-02-25 00:05:59] STEP 1: Generating synthetic egocentric video clips...
+[2026-02-25 00:06:06]   Generated 28 synthetic clips in 7.4s
+[2026-02-25 00:06:06]   Found 2 real egocentric cooking videos
+[2026-02-25 00:06:06]   Total clips: 30 (2 real + 28 synthetic)
+[2026-02-25 00:06:06] 
+[2026-02-25 00:06:06] STEP 2: Extracting hand poses with MediaPipe HandLandmarker...
+[2026-02-25 00:06:06]   Model: hand_landmarker.task (float16, MediaPipe 0.10)
+[2026-02-25 00:06:17]   Clip 01/30: pov_cook_sample | 901 frames | detection=20.5%
+[2026-02-25 00:06:21]   Clip 02/30: pov_cook_sample2 | 450 frames | detection=3.8%
+[2026-02-25 00:06:22]   Clip 03/30: clip_000_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:06:23]   Clip 04/30: clip_001_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:06:24]   Clip 05/30: clip_002_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:06:25]   Clip 06/30: clip_003_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:06:26]   Clip 07/30: clip_004_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:06:27]   Clip 08/30: clip_005_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:06:28]   Clip 09/30: clip_006_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:06:29]   Clip 10/30: clip_007_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:06:30]   Clip 11/30: clip_008_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:06:31]   Clip 12/30: clip_009_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:06:32]   Clip 13/30: clip_010_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:06:33]   Clip 14/30: clip_011_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:06:34]   Clip 15/30: clip_012_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:06:35]   Clip 16/30: clip_013_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:06:36]   Clip 17/30: clip_014_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:06:37]   Clip 18/30: clip_015_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:06:38]   Clip 19/30: clip_016_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:06:39]   Clip 20/30: clip_017_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:06:40]   Clip 21/30: clip_018_open_jar | 120 frames | detection=0.0%
+[2026-02-25 00:06:41]   Clip 22/30: clip_019_flip_page | 120 frames | detection=0.0%
+[2026-02-25 00:06:42]   Clip 23/30: clip_020_pick_mug | 120 frames | detection=0.0%
+[2026-02-25 00:06:43]   Clip 24/30: clip_021_open_drawer | 120 frames | detection=0.0%
+[2026-02-25 00:06:44]   Clip 25/30: clip_022_pour_water | 120 frames | detection=0.0%
+[2026-02-25 00:06:45]   Clip 26/30: clip_023_fold_cloth | 120 frames | detection=0.0%
+[2026-02-25 00:06:46]   Clip 27/30: clip_024_turn_knob | 120 frames | detection=0.0%
+[2026-02-25 00:06:47]   Clip 28/30: clip_025_press_button | 120 frames | detection=0.0%
+[2026-02-25 00:06:48]   Clip 29/30: clip_026_stack_blocks | 120 frames | detection=0.0%
+[2026-02-25 00:06:49]   Clip 30/30: clip_027_grasp_bottle | 120 frames | detection=0.0%
+[2026-02-25 00:06:49]   Processed 30 clips in 42.3s
+[2026-02-25 00:06:49]   Real video detection rate:    12.2%
+[2026-02-25 00:06:49]   Synthetic video detection:    0.0% (procedural joints used)
+[2026-02-25 00:06:49]   Overall detection rate:       0.8%
+[2026-02-25 00:06:49] 
+[2026-02-25 00:06:49] STEP 3: Retargeting human joints → Allegro + packaging LeRobot/RLDS...
+[2026-02-25 00:06:49]   Packaged 30 episodes, 4711 total frames in 0.2s
+[2026-02-25 00:06:49]   LeRobot dataset: C:\Users\chris\clawd\pipeline\e2e_proof/dataset/lerobot_dataset.json
+[2026-02-25 00:06:49]   RLDS dataset: C:\Users\chris\clawd\pipeline\e2e_proof/dataset/rlds_dataset.json
+[2026-02-25 00:06:49] 
+[2026-02-25 00:06:49] STEP 3b: Saving retargeting visualization...
+[2026-02-25 00:06:49]   Retargeting visualization saved: C:\Users\chris\clawd\pipeline\e2e_proof\retargeting_visualization.png
+[2026-02-25 00:06:49] 
+[2026-02-25 00:06:49] STEP 4: Training Behavioral Cloning policy...
+[2026-02-25 00:06:50]   Training data: 4681 samples, obs_dim=23
+[2026-02-25 00:06:50]   Device: cpu
+[2026-02-25 00:06:53]   Epoch  20/100 | Loss: 0.006951 | LR: 0.000271
+[2026-02-25 00:06:54]   Epoch  40/100 | Loss: 0.004718 | LR: 0.000196
+[2026-02-25 00:06:56]   Epoch  60/100 | Loss: 0.004006 | LR: 0.000104
+[2026-02-25 00:06:58]   Epoch  80/100 | Loss: 0.003763 | LR: 0.000029
+[2026-02-25 00:06:59]   Epoch 100/100 | Loss: 0.003734 | LR: 0.000000
+[2026-02-25 00:06:59]   Model saved: C:\Users\chris\clawd\pipeline\e2e_proof\model\bc_policy.pt
+[2026-02-25 00:06:59]   Final loss: 0.003734
+[2026-02-25 00:06:59]   Training complete in 10.3s
+[2026-02-25 00:07:00]   Training curve saved: C:\Users\chris\clawd\pipeline\e2e_proof\model\training_curve.png
+[2026-02-25 00:07:00] 
+[2026-02-25 00:07:00] STEP 5: MuJoCo simulation rollout...
+[2026-02-25 00:07:00]   MuJoCo model loaded: 23 DoF, 16 actuators
+[2026-02-25 00:07:00]   Simulating 180 frames (6.0s)...
+[2026-02-25 00:07:01]   Rollout video saved: C:\Users\chris\clawd\pipeline\e2e_proof\sim_output\rollout.mp4
+[2026-02-25 00:07:01]   Sim rollout complete in 1.7s
+[2026-02-25 00:07:01] 
+[2026-02-25 00:07:01] STEP 6: Saving demo summary panel...
+[2026-02-25 00:07:02]   Demo summary panel saved: C:\Users\chris\clawd\pipeline\e2e_proof\DEMO_SUMMARY.png
+[2026-02-25 00:07:02] 
+[2026-02-25 00:07:02] ======================================================================
+[2026-02-25 00:07:02] PIPELINE COMPLETE — ALL ARTIFACTS SAVED
+[2026-02-25 00:07:02] ======================================================================
+[2026-02-25 00:07:02]   Clips generated:      30 synthetic egocentric videos
+[2026-02-25 00:07:02]   Episodes processed:   30
+[2026-02-25 00:07:02]   Total frames:         4,711
+[2026-02-25 00:07:02]   BC final loss:        0.003734
+[2026-02-25 00:07:02] 
+[2026-02-25 00:07:02]   Artifacts:
+[2026-02-25 00:07:02]     Clips dir:          pipeline/e2e_proof/clips/
+[2026-02-25 00:07:02]     Hand pose overlays: pipeline/e2e_proof/hand_pose_overlays/
+[2026-02-25 00:07:02]     Retarget vis:       C:\Users\chris\clawd\pipeline\e2e_proof\retargeting_visualization.png
+[2026-02-25 00:07:02]     Dataset (LeRobot):  pipeline/e2e_proof/dataset/lerobot_dataset.json
+[2026-02-25 00:07:02]     Dataset (RLDS):     pipeline/e2e_proof/dataset/rlds_dataset.json
+[2026-02-25 00:07:02]     BC model:           pipeline/e2e_proof/model/bc_policy.pt
+[2026-02-25 00:07:02]     Training curve:     C:\Users\chris\clawd\pipeline\e2e_proof\model\training_curve.png
+[2026-02-25 00:07:02]     Sim rollout video:  C:\Users\chris\clawd\pipeline\e2e_proof\sim_output\rollout.mp4
+[2026-02-25 00:07:02]     Demo summary:       C:\Users\chris\clawd\pipeline\e2e_proof\DEMO_SUMMARY.png
+[2026-02-25 00:07:02]     Full log:           C:\Users\chris\clawd\pipeline\e2e_proof\pipeline_log.txt
+[2026-02-25 00:07:02] ======================================================================
+
+======================================================================
+FINAL DEMO VIDEO BUILD
+======================================================================
+[2026-02-25 00:13:18] Demo video built: DEXCROWD_PIPELINE_DEMO.mp4 (13.1 MB, ~50s)
+[2026-02-25 00:13:18] Discord posts: 6 messages sent to #sim-work (1474836209808445765)
+  - Text summary + step breakdown
+  - MediaPipe overlay image (pov_cook_sample2)
+  - Retargeting visualization (human->Allegro)
+  - BC training curve (dual linear/log)
+  - MuJoCo sim rollout video
+  - Pipeline summary panel
+  - Final notes + next steps
+
+ARTIFACT INVENTORY:
+  clips/               28 synthetic + 2 real egocentric videos
+  hand_pose_overlays/  2 MediaPipe skeleton overlays (real kitchen video)
+  dataset/             LeRobot JSON (1.9MB) + RLDS JSON + NumPy arrays
+  model/               bc_policy.pt (432KB) + training_curve.png
+  sim_output/          dexcrowd_arm.xml + rollout.mp4 (586KB)
+  DEMO_SUMMARY.png     Full pipeline panel (6 stages)
+  DEXCROWD_PIPELINE_DEMO.mp4  50s animated walkthrough (13.1MB)
+  pipeline_log.txt     Full timestamped run log
+
+======================================================================
+PIPELINE PROOF COMPLETE � 2026-02-25
+======================================================================

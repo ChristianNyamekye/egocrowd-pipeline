@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EgoCrowd — 3D Hand Skeleton Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0c10; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
+  #info {
+    position: absolute; top: 15px; left: 15px; z-index: 10;
+    background: rgba(0,0,0,0.7); padding: 12px 18px; border-radius: 8px;
+    font-size: 13px; line-height: 1.6;
+  }
+  #info h2 { font-size: 16px; margin-bottom: 4px; color: #4ade80; }
+  #controls {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 10; display: flex; gap: 10px; align-items: center;
+    background: rgba(0,0,0,0.7); padding: 8px 16px; border-radius: 8px;
+  }
+  button { background: #4ade80; color: #000; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+  button:hover { background: #22c55e; }
+  input[type=range] { width: 300px; }
+  #frame-label { font-size: 12px; color: #aaa; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<div id="info">
+  <h2>EgoCrowd — 3D Skeleton</h2>
+  <div>Source: iPhone LiDAR (Record3D)</div>
+  <div id="stats">Loading...</div>
+</div>
+<div id="controls">
+  <button id="playBtn">▶ Play</button>
+  <input type="range" id="scrubber" min="0" max="100" value="0">
+  <span id="frame-label">0 / 0</span>
+  <button id="resetCam">Reset Camera</button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.182.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// Hand connections (MediaPipe)
+const CONNECTIONS = [
+  [0,1],[1,2],[2,3],[3,4],
+  [0,5],[5,6],[6,7],[7,8],
+  [0,9],[9,10],[10,11],[11,12],
+  [0,13],[13,14],[14,15],[15,16],
+  [0,17],[17,18],[18,19],[19,20],
+  [5,9],[9,13],[13,17]
+];
+
+const FINGERTIPS = [4, 8, 12, 16, 20];
+
+let scene, camera, renderer, controls;
+let handData = null;
+let currentFrame = 0;
+let playing = false;
+let jointMeshes = [];
+let boneMeshes = [];
+let trailPoints = [];
+let trailLine = null;
+
+// Scene setup
+function init() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0c14);
+  scene.fog = new THREE.Fog(0x0a0c14, 3, 8);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 100);
+  camera.position.set(0.3, 0.3, 0.5);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  document.body.appendChild(renderer.domElement);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.target.set(0, 0, 0);
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x404060, 2);
+  scene.add(ambient);
+  const dir = new THREE.DirectionalLight(0xffffff, 1.5);
+  dir.position.set(1, 2, 1);
+  scene.add(dir);
+
+  // Grid
+  const grid = new THREE.GridHelper(2, 40, 0x1a3040, 0x0f1a25);
+  grid.position.y = -0.15;
+  scene.add(grid);
+
+  // Axes
+  const axes = new THREE.AxesHelper(0.15);
+  axes.position.set(-0.4, -0.15, -0.4);
+  scene.add(axes);
+
+  // Create joint spheres (21 per hand)
+  const jointGeo = new THREE.SphereGeometry(0.005, 12, 12);
+  const tipGeo = new THREE.SphereGeometry(0.007, 12, 12);
+  const jointMat = new THREE.MeshStandardMaterial({ color: 0x4ade80, emissive: 0x1a5c30 });
+  const tipMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x666666 });
+
+  for (let i = 0; i < 21; i++) {
+    const mesh = new THREE.Mesh(
+      FINGERTIPS.includes(i) ? tipGeo : jointGeo,
+      FINGERTIPS.includes(i) ? tipMat : jointMat
+    );
+    mesh.visible = false;
+    scene.add(mesh);
+    jointMeshes.push(mesh);
+  }
+
+  // Create bone lines
+  const boneMat = new THREE.LineBasicMaterial({ color: 0x4ade80, linewidth: 2 });
+  for (const [a, b] of CONNECTIONS) {
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(), new THREE.Vector3()
+    ]);
+    const line = new THREE.Line(geo, boneMat);
+    line.visible = false;
+    scene.add(line);
+    boneMeshes.push(line);
+  }
+
+  // Trail
+  const trailMat = new THREE.LineBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.5 });
+  const trailGeo = new THREE.BufferGeometry();
+  trailLine = new THREE.Line(trailGeo, trailMat);
+  scene.add(trailLine);
+
+  // Events
+  window.addEventListener('resize', onResize);
+  document.getElementById('playBtn').addEventListener('click', togglePlay);
+  document.getElementById('scrubber').addEventListener('input', onScrub);
+  document.getElementById('resetCam').addEventListener('click', () => {
+    camera.position.set(0.3, 0.3, 0.5);
+    controls.target.set(0, 0, 0);
+  });
+}
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
+}
+
+function onScrub(e) {
+  if (handData) {
+    currentFrame = Math.floor(e.target.value / 100 * (handData.frames.length - 1));
+  }
+}
+
+function updateSkeleton(frameIdx) {
+  if (!handData) return;
+
+  const fd = handData.frames[frameIdx];
+  let hasHand = false;
+
+  // Try to find a hand (prefer Right)
+  let hand = null;
+  if (fd && fd.hands) {
+    for (const h of fd.hands) {
+      if (h.label === 'Right') { hand = h; break; }
+    }
+    if (!hand && fd.hands.length > 0) hand = fd.hands[0];
+  }
+
+  // If no hand this frame, try interpolation from nearest frames
+  if (!hand) {
+    // Find nearest frame with hand data
+    for (let offset = 1; offset < 10; offset++) {
+      const before = frameIdx - offset;
+      const after = frameIdx + offset;
+      if (before >= 0 && handData.frames[before].hands.length > 0) {
+        hand = handData.frames[before].hands[0];
+        break;
+      }
+      if (after < handData.frames.length && handData.frames[after].hands.length > 0) {
+        hand = handData.frames[after].hands[0];
+        break;
+      }
+    }
+  }
+
+  if (hand) {
+    hasHand = true;
+    const lms = hand.landmarks_3d;
+
+    // Center around wrist
+    const wrist = lms[0];
+    const cx = wrist.x, cy = wrist.y, cz = wrist.z;
+
+    for (let i = 0; i < 21 && i < lms.length; i++) {
+      const lm = lms[i];
+      if (lm.depth > 0) {
+        // Position relative to wrist, swap axes for Three.js (Y-up)
+        jointMeshes[i].position.set(
+          (lm.x - cx),
+          -(lm.y - cy),  // flip Y
+          -(lm.z - cz)   // flip Z (depth)
+        );
+        jointMeshes[i].visible = true;
+      } else {
+        jointMeshes[i].visible = false;
+      }
+    }
+
+    // Update bones
+    for (let k = 0; k < CONNECTIONS.length; k++) {
+      const [a, b] = CONNECTIONS[k];
+      if (jointMeshes[a].visible && jointMeshes[b].visible) {
+        const positions = boneMeshes[k].geometry.attributes.position;
+        positions.setXYZ(0, jointMeshes[a].position.x, jointMeshes[a].position.y, jointMeshes[a].position.z);
+        positions.setXYZ(1, jointMeshes[b].position.x, jointMeshes[b].position.y, jointMeshes[b].position.z);
+        positions.needsUpdate = true;
+        boneMeshes[k].visible = true;
+      } else {
+        boneMeshes[k].visible = false;
+      }
+    }
+
+    // Add to trail (wrist position in world space)
+    if (wrist.depth > 0) {
+      trailPoints.push(new THREE.Vector3(0, 0, 0)); // wrist is at origin in relative coords
+      // Actually track absolute position for trail
+      trailPoints.push(new THREE.Vector3(wrist.x * 2, -wrist.y * 2, -wrist.z * 2));
+      if (trailPoints.length > 500) trailPoints.shift();
+      trailLine.geometry.dispose();
+      trailLine.geometry = new THREE.BufferGeometry().setFromPoints(
+        trailPoints.filter((_, i) => i % 2 === 1) // only absolute positions
+      );
+    }
+  } else {
+    // Hide all
+    jointMeshes.forEach(m => m.visible = false);
+    boneMeshes.forEach(m => m.visible = false);
+  }
+
+  // Update UI
+  document.getElementById('frame-label').textContent = `${frameIdx} / ${handData.frames.length}`;
+  document.getElementById('scrubber').value = frameIdx / handData.frames.length * 100;
+  
+  const statsEl = document.getElementById('stats');
+  if (hasHand && hand) {
+    const w = hand.landmarks_3d[0];
+    statsEl.innerHTML = `Depth: ${w.depth.toFixed(3)}m | Frame: ${frameIdx}`;
+  } else {
+    statsEl.innerHTML = `No hand detected | Frame: ${frameIdx}`;
+  }
+}
+
+let lastTime = 0;
+const FPS = 8;
+
+function animate(time) {
+  requestAnimationFrame(animate);
+
+  if (playing && time - lastTime > 1000 / FPS) {
+    lastTime = time;
+    currentFrame++;
+    if (handData && currentFrame >= handData.frames.length) {
+      currentFrame = 0;
+      trailPoints = [];
+    }
+    updateSkeleton(currentFrame);
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// Load data
+async function loadData() {
+  try {
+    const resp = await fetch('hand_poses.json');
+    handData = await resp.json();
+    document.getElementById('scrubber').max = handData.frames.length - 1;
+    document.getElementById('stats').innerHTML = 
+      `${handData.detected_frames} hands in ${handData.total_frames} frames (${(handData.detection_rate*100).toFixed(1)}%)`;
+    updateSkeleton(0);
+  } catch (e) {
+    document.getElementById('stats').innerHTML = 'Drop hand_poses.json here or serve locally';
+    
+    // Enable drag-and-drop
+    document.body.addEventListener('dragover', e => e.preventDefault());
+    document.body.addEventListener('drop', async e => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      const text = await file.text();
+      handData = JSON.parse(text);
+      document.getElementById('scrubber').max = handData.frames.length - 1;
+      updateSkeleton(0);
+    });
+  }
+}
+
+init();
+loadData();
+animate(0);
+</script>
+</body>
+</html>
