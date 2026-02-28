@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "egocrowd"
+version = "0.1.0"
+description = "Crowdsourced egocentric manipulation data pipeline for robot learning"
+readme = "README.md"
+license = {text = "CC-BY-4.0"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Christian Nyamekye", email = "christian.k.nyamekye.26@dartmouth.edu"},
+]
+keywords = ["robotics", "manipulation", "egocentric", "imitation-learning", "lerobot", "crowdsourcing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "numpy>=1.24",
+    "h5py>=3.8",
+    "scipy>=1.10",
+    "huggingface_hub>=0.20",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "torch>=2.0",
+    "torchvision",
+    "groundingdino-py",
+]
+sim = [
+    "mujoco>=3.0",
+    "matplotlib",
+]
+all = [
+    "egocrowd[gpu]",
+    "egocrowd[sim]",
+]
+
+[project.scripts]
+egocrowd = "egocrowd.cli:main"
+
+[project.urls]
+Homepage = "https://demo-iota-six-98.vercel.app"
+Repository = "https://github.com/ChristianNyamekye/egocrowd-pipeline"
+Paper = "https://arxiv.org/abs/TODO"
+Dataset = "https://huggingface.co/datasets/egocrowd/pick-mug-v5"
+
+
+[tool.setuptools.packages.find]
+include = ["egocrowd*"]
