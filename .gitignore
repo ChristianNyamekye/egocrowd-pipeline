@@ -14,6 +14,38 @@ MEMORY.md
 USER.md
 IDENTITY.md
 
+# Agent personality/config (private)
+SOUL.md
+AGENTS.md
+HEARTBEAT.md
+TOOLS.md
+BOOTSTRAP.md
+WORKFLOW_AUTO.md
+
+# Personal tools (not pipeline)
+tools/gmail*.py
+tools/gmail*.ps1
+tools/calendar*.ps1
+tools/discord_watchdog.py
+tools/gateway_watchdog*
+tools/harden-firewall.ps1
+tools/outreach*
+tools/runpod-deploy.ps1
+tools/semantic_search.py
+tools/youtube*.py
+tools/youtube*.json
+tools/competitive-intel.py
+tools/check_bounces.py
+tools/check_pod.py
+tools/check_vercel_otp.py
+tools/fix_model_allocation.py
+tools/momentum-signals.py
+tools/price-monitor.js
+tools/workspace_check*.py
+
+# Mission control (internal dashboard)
+mission-control/
+
 # Tool outputs with potential secrets
 tools/semantic_index.npz
 tools/semantic_meta.json
