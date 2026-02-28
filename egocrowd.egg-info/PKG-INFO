@@ -1,3 +1,39 @@
+Metadata-Version: 2.4
+Name: egocrowd
+Version: 0.1.0
+Summary: Crowdsourced egocentric manipulation data pipeline for robot learning
+Author-email: Christian Nyamekye <christian.k.nyamekye.26@dartmouth.edu>
+License: CC-BY-4.0
+Project-URL: Homepage, https://demo-iota-six-98.vercel.app
+Project-URL: Repository, https://github.com/ChristianNyamekye/egocrowd-pipeline
+Project-URL: Paper, https://arxiv.org/abs/TODO
+Project-URL: Dataset, https://huggingface.co/datasets/egocrowd/pick-mug-v5
+Keywords: robotics,manipulation,egocentric,imitation-learning,lerobot,crowdsourcing
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24
+Requires-Dist: h5py>=3.8
+Requires-Dist: scipy>=1.10
+Requires-Dist: huggingface_hub>=0.20
+Provides-Extra: gpu
+Requires-Dist: torch>=2.0; extra == "gpu"
+Requires-Dist: torchvision; extra == "gpu"
+Requires-Dist: groundingdino-py; extra == "gpu"
+Provides-Extra: sim
+Requires-Dist: mujoco>=3.0; extra == "sim"
+Requires-Dist: matplotlib; extra == "sim"
+Provides-Extra: all
+Requires-Dist: egocrowd[gpu]; extra == "all"
+Requires-Dist: egocrowd[sim]; extra == "all"
+
 # EgoCrowd
 
 **Crowdsourced egocentric manipulation data pipeline for robot learning.**
@@ -6,7 +42,7 @@ Turn iPhone recordings into robot training data. Zero additional hardware requir
 
 [![Paper](https://img.shields.io/badge/arXiv-EgoCrowd-b31b1b)](https://arxiv.org/abs/TODO)
 [![Dataset](https://img.shields.io/badge/HuggingFace-egocrowd-yellow)](https://huggingface.co/datasets/egocrowd/pick-mug-v5)
-[![Demo](https://img.shields.io/badge/Demo-Site-green)](https://egocrowd.vercel.app)
+[![Demo](https://img.shields.io/badge/Demo-Site-green)](https://demo-iota-six-98.vercel.app)
 
 ## Install
 
@@ -79,19 +115,19 @@ to_lerobot_hdf5(traj, qpos_data, "output/data.hdf5")
 iPhone (.r3d)
     |
     v
-[1. Parse] â”€â”€> RGB frames + LiDAR depth + camera poses
+[1. Parse] ──> RGB frames + LiDAR depth + camera poses
     |
     v
-[2. Detect] â”€â”€> GroundingDINO: open-vocab object detection
+[2. Detect] ──> GroundingDINO: open-vocab object detection
     |
     v
-[3. Hand Pose] â”€â”€> HaMeR: 3D hand mesh reconstruction (93.7% coverage)
+[3. Hand Pose] ──> HaMeR: 3D hand mesh reconstruction (93.7% coverage)
     |
     v
-[4. Retarget] â”€â”€> Spatial trajectory: hand motion -> robot EE targets
+[4. Retarget] ──> Spatial trajectory: hand motion -> robot EE targets
     |
     v
-[5. Export] â”€â”€> LeRobot HDF5 | RLDS JSON | Raw JSON
+[5. Export] ──> LeRobot HDF5 | RLDS JSON | Raw JSON
 ```
 
 ## Key Results

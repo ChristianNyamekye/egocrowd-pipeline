@@ -50,7 +50,7 @@ all = [
 egocrowd = "egocrowd.cli:main"
 
 [project.urls]
-Homepage = "https://demo-iota-six-98.vercel.app"
+Homepage = "https://egocrowd.vercel.app"
 Repository = "https://github.com/ChristianNyamekye/egocrowd-pipeline"
 Paper = "https://arxiv.org/abs/TODO"
 Dataset = "https://huggingface.co/datasets/egocrowd/pick-mug-v5"

@@ -1,0 +1,2 @@
+[console_scripts]
+egocrowd = egocrowd.cli:main

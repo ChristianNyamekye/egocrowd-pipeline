@@ -1,0 +1,17 @@
+numpy>=1.24
+h5py>=3.8
+scipy>=1.10
+huggingface_hub>=0.20
+
+[all]
+egocrowd[gpu]
+egocrowd[sim]
+
+[gpu]
+torch>=2.0
+torchvision
+groundingdino-py
+
+[sim]
+mujoco>=3.0
+matplotlib

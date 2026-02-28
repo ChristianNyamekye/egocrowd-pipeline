@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+egocrowd/__init__.py
+egocrowd/cli.py
+egocrowd/detect.py
+egocrowd/export.py
+egocrowd/hand_pose.py
+egocrowd/parse.py
+egocrowd/retarget.py
+egocrowd.egg-info/PKG-INFO
+egocrowd.egg-info/SOURCES.txt
+egocrowd.egg-info/dependency_links.txt
+egocrowd.egg-info/entry_points.txt
+egocrowd.egg-info/requires.txt
+egocrowd.egg-info/top_level.txt
