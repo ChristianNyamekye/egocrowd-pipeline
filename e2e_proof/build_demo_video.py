@@ -1,5 +1,5 @@
 """
-Build the DexCrowd E2E Pipeline Demo Walkthrough Video.
+Build the flexa E2E Pipeline Demo Walkthrough Video.
 Stitches together all pipeline stages into a single narrated demo.
 
 Structure (with title cards):
@@ -81,7 +81,7 @@ def draw_progress_bar(frame, step, total_steps=6, y=H-25):
 
 
 def draw_watermark(frame):
-    put_text(frame, "DexCrowd Pipeline", (W - 230, H - 10), FONT_SM, 0.4, (60, 80, 60), 1)
+    put_text(frame, "flexa Pipeline", (W - 230, H - 10), FONT_SM, 0.4, (60, 80, 60), 1)
 
 
 def title_screen(writer, duration_s=3.0):
@@ -98,7 +98,7 @@ def title_screen(writer, duration_s=3.0):
         # Fade in
         alpha = min(1.0, t * 3)
 
-        put_centered(f, "DexCrowd", H//2 - 90, scale=2.5, color=ACCENT, thickness=4)
+        put_centered(f, "flexa", H//2 - 90, scale=2.5, color=ACCENT, thickness=4)
         put_centered(f, "Egocentric Video  ->  Robot Manipulation", H//2 - 20, scale=0.9, color=ACCENT2)
         put_centered(f, "End-to-End Pipeline Proof", H//2 + 30, scale=0.75, color=GRAY)
 
@@ -451,7 +451,7 @@ def summary_card(writer, duration_s=5.0):
     total_frames = int(duration_s * FPS)
 
     lines = [
-        ("Pipeline", "DexCrowd End-to-End Proof  |  Feb 2026", ACCENT),
+        ("Pipeline", "flexa End-to-End Proof  |  Feb 2026", ACCENT),
         ("", "", WHITE),
         ("Input", "30 egocentric manipulation clips (2 real + 28 synthetic)", WHITE),
         ("Step 1", "Generated 30 clips x 4s | 10 tasks: pick, pour, fold, grasp...", WHITE),
@@ -489,7 +489,7 @@ def summary_card(writer, duration_s=5.0):
         # Final CTA
         if t > 0.85:
             alpha = min(1.0, (t - 0.85) * 7)
-            put_centered(f, "DexCrowd  |  Crowdsourced Dexterous Manipulation Data", H - 45,
+            put_centered(f, "flexa  |  Crowdsourced Dexterous Manipulation Data", H - 45,
                         scale=0.6, color=GOLD, thickness=1)
             put_centered(f, "egocentric video  ->  retargeted robot joints  ->  trained policy",
                         H - 20, scale=0.45, color=GRAY, thickness=1)
@@ -500,7 +500,7 @@ def summary_card(writer, duration_s=5.0):
 
 
 def build_demo_video():
-    out_path = str(OUTPUT_DIR / "DEXCROWD_PIPELINE_DEMO.mp4")
+    out_path = str(OUTPUT_DIR / "flexa_PIPELINE_DEMO.mp4")
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(out_path, fourcc, FPS, (W, H))
 

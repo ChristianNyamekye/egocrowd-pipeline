@@ -1,12 +1,12 @@
 """
-EgoDex → LeRobot Format Converter
-Converts Apple EgoDex egocentric manipulation data to LeRobot-compatible episodes.
+Flexa → LeRobot Format Converter
+Converts Apple Flexa egocentric manipulation data to LeRobot-compatible episodes.
 
-Input: EgoDex HDF5 + MP4 pairs (hand pose + video)
+Input: Flexa HDF5 + MP4 pairs (hand pose + video)
 Output: LeRobot dataset (HuggingFace datasets format)
 
 Usage:
-    python egodex_to_lerobot.py --input /data/egodex/test --output /data/output --max-episodes 50
+    python Flexa_to_lerobot.py --input /data/Flexa/test --output /data/output --max-episodes 50
 """
 
 import argparse
@@ -98,7 +98,7 @@ def compute_actions(states):
 
 
 def process_episode(hdf5_path, mp4_path, episode_idx, target_fps=10):
-    """Process a single EgoDex episode into LeRobot format."""
+    """Process a single Flexa episode into LeRobot format."""
     with h5py.File(hdf5_path, "r") as f:
         n_frames = f["transforms/camera"].shape[0]
         source_fps = 30
@@ -225,8 +225,8 @@ def save_lerobot_dataset(episodes, output_dir):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert EgoDex to LeRobot format")
-    parser.add_argument("--input", required=True, help="Path to EgoDex data directory")
+    parser = argparse.ArgumentParser(description="Convert Flexa to LeRobot format")
+    parser.add_argument("--input", required=True, help="Path to Flexa data directory")
     parser.add_argument("--output", required=True, help="Output directory")
     parser.add_argument("--max-episodes", type=int, default=50, help="Max episodes to process")
     parser.add_argument("--fps", type=int, default=10, help="Target FPS (default: 10)")

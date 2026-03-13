@@ -1,125 +1,155 @@
-# EgoCrowd
+# Flexa Pipeline
 
-**Crowdsourced egocentric manipulation data pipeline for robot learning.**
+**Phone capture → robot training data.** Record a task with your iPhone, get a LeRobot/RLDS-compatible dataset out.
 
-Turn iPhone recordings into robot training data. Zero additional hardware required.
+## Architecture
 
-[![Paper](https://img.shields.io/badge/arXiv-EgoCrowd-b31b1b)](https://arxiv.org/abs/TODO)
-[![Dataset](https://img.shields.io/badge/HuggingFace-egocrowd-yellow)](https://huggingface.co/datasets/egocrowd/pick-mug-v5)
-[![Demo](https://img.shields.io/badge/Demo-Site-green)](https://egocrowd.vercel.app)
-
-## Install
-
-```bash
-pip install egocrowd
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  1. CAPTURE  │────▶│  2. INGEST   │────▶│ 3. RETARGET  │────▶│  4. EXPORT   │────▶│  5. SIM/VIZ  │
+│  iPhone R3D  │     │ Extract + Det│     │ Human→Robot  │     │ LeRobot/RLDS │     │  MuJoCo Val  │
+└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
 ```
 
-**With GPU support** (for local object detection + hand pose):
-```bash
-pip install egocrowd[gpu]
-```
+### Stage 1: Capture (`r3d_ingest.py`)
+- Input: `.r3d` file from Record3D app (iPhone LiDAR)
+- Extracts: RGB frames, depth maps, camera intrinsics, confidence maps
+- Output: `r3d_output/<session>/` with frames + metadata
 
-**With simulation** (for MuJoCo replay):
-```bash
-pip install egocrowd[sim]
-```
+### Stage 2: Hand Tracking + Object Detection
+- **Hand tracking** (`hand_tracker_v2.py` or `modal_hamer.py`):
+  - Runs HaMeR (Hand Mesh Recovery) on extracted frames
+  - Produces 3D hand mesh + wrist position per frame
+  - Can run locally or on Modal (GPU cloud) via `run_modal_pipeline.py`
+- **Object detection** (`detect_objects.py`):
+  - Runs GroundingDINO for object bounding boxes
+  - Detects task-relevant objects (blocks, mugs, etc.)
+  - Output: `object_detections/<session>.json`
+
+### Stage 3: Spatial Calibration + Retargeting
+- **3D reconstruction** (`reconstruct_wrist_3d.py`):
+  - Projects 2D hand detections into 3D using depth + camera intrinsics
+  - Output: `wrist_trajectories/<task>_wrist3d.json`
+- **Workspace calibration** (`calibrate_workspace.py`):
+  - Aligns phone coordinate frame → robot workspace
+  - Maps detected object positions to sim-space
+  - Output: `wrist_trajectories/<task>_calibrated.json`
+- **Robot retargeting** (`validate_and_retarget.py`):
+  - Maps human wrist trajectory → robot joint positions via IK
+  - Handles grasp detection (open/close from hand mesh)
+  - Currently targets: Franka Panda (7-DOF arm + parallel gripper)
+
+### Stage 4: Dataset Export
+- **LeRobot format** (`egodex_to_lerobot.py`):
+  - Exports to LeRobot-compatible HDF5 + JSON metadata
+  - Fields: `qpos_arm[7]`, `qvel_arm[7]`, `ee_pos[3]`, `gripper_state[1]`, `target_qpos[7]`, `target_gripper[1]`
+  - Output: `lerobot_dataset_v5/`
+- **RLDS/Open X-Embodiment format** (`egodex_to_oxe.py`):
+  - Exports to TFRecord format compatible with RT-X ecosystem
+
+### Stage 5: Simulation Validation (MuJoCo)
+- **Franka sim** (`mujoco_franka_v9.py`): Replays retargeted trajectory on Franka arm — this one works cleanly
+- **G1 humanoid sim** (`mujoco_g1_v10.py`): Replays on Unitree G1 — WIP, adhesion-based grasping
+- **H1 + Shadow Hand** (`mujoco_h1_shadow_v1.py`): H1 body + dexterous hand — WIP
+- Uses [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie) robot models
 
 ## Quick Start
 
-### Download and explore the dataset
-
-```python
-from egocrowd import download_dataset
-import h5py
-
-# Download from HuggingFace
-path = download_dataset("egocrowd/pick-mug-v5")
-
-with h5py.File(path, "r") as f:
-    ep = f["episode_0"]
-    qpos = ep["observations/qpos_arm"][:]       # (270, 7) joint positions
-    ee = ep["observations/ee_pos"][:]            # (270, 3) end-effector XYZ
-    actions = ep["actions/target_qpos"][:]       # (270, 7) target joints
-    print(f"Mug lift: {ep.attrs['mug_lift_cm']:.1f}cm")
-# -> Mug lift: 17.7cm
+### Prerequisites
+```bash
+pip install mujoco numpy pillow opencv-python
+pip install record3d  # for R3D file parsing
+# For GPU stages (HaMeR):
+pip install torch torchvision
+# For object detection:
+pip install groundingdino-py
 ```
 
-### Process a new recording
+### Run the pipeline end-to-end
 
 ```bash
-# Parse .r3d file from Record3D
-egocrowd process recording.r3d --object mug --output ./my_dataset
+# 1. Ingest R3D file
+python r3d_ingest.py path/to/recording.r3d
 
-# With cloud GPU processing (GroundingDINO + HaMeR)
-egocrowd process recording.r3d --cloud --output ./my_dataset
+# 2. Run hand tracking (local or cloud)
+python hand_tracker_v2.py r3d_output/<session>/
+# OR for cloud GPU:
+python run_modal_pipeline.py <session>
+
+# 3. Detect objects
+python detect_objects.py r3d_output/<session>/
+
+# 4. Reconstruct 3D wrist trajectory
+python reconstruct_wrist_3d.py <session> --task stack2
+
+# 5. Calibrate to robot workspace
+python calibrate_workspace.py wrist_trajectories/stack2_wrist3d.json
+
+# 6. Export to LeRobot format
+python egodex_to_lerobot.py
+
+# 7. Validate in simulation (optional)
+python mujoco_franka_v9.py stack2
 ```
 
-### Use as a library
+### View the R3D capture
+Open `r3d_viewer/index.html` in a browser, or visit: https://r3dviewer.vercel.app
 
-```python
-from egocrowd import parse_r3d, spatial_trajectory
-from egocrowd.export import to_lerobot_hdf5, to_rlds_json
+## Key Files
 
-# Parse iPhone recording
-data = parse_r3d("recording.r3d", output_dir="parsed/")
+| File | Purpose |
+|------|---------|
+| `r3d_ingest.py` | Parse .r3d → frames + depth + intrinsics |
+| `hand_tracker_v2.py` | HaMeR hand mesh recovery (local) |
+| `modal_hamer.py` | HaMeR on Modal cloud GPU |
+| `detect_objects.py` | GroundingDINO object detection |
+| `reconstruct_wrist_3d.py` | 2D→3D wrist trajectory via depth |
+| `calibrate_workspace.py` | Phone→robot coordinate alignment |
+| `validate_and_retarget.py` | Human→robot IK retargeting |
+| `egodex_to_lerobot.py` | Export LeRobot HDF5 dataset |
+| `egodex_to_oxe.py` | Export RLDS/OXE TFRecord dataset |
+| `mujoco_franka_v9.py` | Franka sim validation (working) |
+| `mujoco_g1_v10.py` | G1 humanoid sim (WIP) |
+| `schema/episode.py` | Data schema definitions |
 
-# Generate robot trajectory (after hand pose extraction)
-traj = spatial_trajectory(
-    hamer_results="parsed/hamer_results.json",
-    object_poses="parsed/object_poses_3d.json",
-)
-
-# Export to LeRobot format
-to_lerobot_hdf5(traj, qpos_data, "output/data.hdf5")
-```
-
-## Pipeline Architecture
+## Data Flow
 
 ```
 iPhone (.r3d)
-    |
-    v
-[1. Parse] â”€â”€> RGB frames + LiDAR depth + camera poses
-    |
-    v
-[2. Detect] â”€â”€> GroundingDINO: open-vocab object detection
-    |
-    v
-[3. Hand Pose] â”€â”€> HaMeR: 3D hand mesh reconstruction (93.7% coverage)
-    |
-    v
-[4. Retarget] â”€â”€> Spatial trajectory: hand motion -> robot EE targets
-    |
-    v
-[5. Export] â”€â”€> LeRobot HDF5 | RLDS JSON | Raw JSON
+  ├── RGB frames (30fps, 1920x1440)
+  ├── Depth maps (LiDAR, 256x192)
+  └── Camera intrinsics + poses
+        │
+        ▼
+  HaMeR → 3D hand mesh per frame
+  GroundingDINO → object bounding boxes
+        │
+        ▼
+  Depth reprojection → wrist XYZ trajectory
+  Workspace calibration → sim-space coordinates
+        │
+        ▼
+  IK retargeting → robot joint angles
+  Grasp detection → gripper open/close
+        │
+        ▼
+  LeRobot HDF5 dataset
+  ├── observations: qpos[7], ee_pos[3], gripper[1]
+  ├── actions: target_qpos[7], target_gripper[1]
+  └── metadata: task, fps, episode phases
 ```
 
-## Key Results
+## Status
 
-- **18.1cm clean mug lift** in MuJoCo simulation from a single iPhone recording
-- **93.7% hand pose coverage** via HaMeR (no wearable sensors needed)
-- **$0 contributor hardware cost** (core tier: iPhone with LiDAR only)
-- **9-55x cheaper** than teleoperation-based data collection
-
-## Supported Formats
-
-| Format | File | Use Case |
-|--------|------|----------|
-| LeRobot HDF5 | `data.hdf5` | HuggingFace ecosystem, policy training |
-| RLDS JSON | `episode.json` | RT-X, Octo, Open X-Embodiment |
-| Raw JSON | `raw.json` | Custom pipelines, analysis |
-
-## Citation
-
-```bibtex
-@article{nyamekye2026egocrowd,
-  title={EgoCrowd: Crowdsourced Egocentric Manipulation Data at Consumer Cost},
-  author={Nyamekye, Christian},
-  journal={arXiv preprint arXiv:TODO},
-  year={2026}
-}
-```
-
-## License
-
-CC-BY-4.0
+- ✅ R3D ingest + frame extraction
+- ✅ HaMeR hand tracking (local + cloud)
+- ✅ Object detection (GroundingDINO)
+- ✅ 3D wrist trajectory reconstruction
+- ✅ Workspace calibration
+- ✅ Franka IK retargeting
+- ✅ LeRobot dataset export
+- ✅ Franka MuJoCo sim replay (clean)
+- 🔧 G1 humanoid sim (grasping needs work — adhesion-based, not physically realistic yet)
+- 🔧 H1 + Shadow Hand sim (WIP)
+- 📋 Multi-episode batch processing
+- 📋 Automated quality validation

@@ -1,6 +1,6 @@
 """
-EgoDex → Open X-Embodiment (OXE) Format Converter
-Converts Apple EgoDex egocentric manipulation data to RLDS-compliant TFRecord format
+Flexa → Open X-Embodiment (OXE) Format Converter
+Converts Apple Flexa egocentric manipulation data to RLDS-compliant TFRecord format
 compatible with the Open X-Embodiment dataset ecosystem.
 
 OXE uses the RLDS episode format (google-research/rlds) stored as TFRecords via
@@ -14,13 +14,13 @@ Paper: https://arxiv.org/abs/2310.08864
 Usage:
     # Step 1: Build the dataset
     cd pipeline
-    python egodex_to_oxe.py --input /data/egodex/test --max-episodes 50
+    python Flexa_to_oxe.py --input /data/Flexa/test --max-episodes 50
 
-    # This creates ~/tensorflow_datasets/egodex_dataset/1.0.0/
+    # This creates ~/tensorflow_datasets/Flexa_dataset/1.0.0/
 
     # Step 2: Load with standard RLDS tooling
     import tensorflow_datasets as tfds
-    ds = tfds.load('egodex_dataset', split='train')
+    ds = tfds.load('Flexa_dataset', split='train')
 
 Requirements:
     pip install tensorflow tensorflow_datasets tensorflow_hub numpy h5py Pillow
@@ -55,7 +55,7 @@ def _ensure_tf():
         hub = _hub
 
 
-# Key hand joints — same as egodex_to_lerobot.py
+# Key hand joints — same as Flexa_to_lerobot.py
 KEY_JOINTS = [
     "leftHand", "rightHand",
     "leftIndexFingerTip", "leftIndexFingerKnuckle",
@@ -119,7 +119,7 @@ def extract_video_frames(mp4_path, target_fps=10, max_frames=None):
 
 
 def load_episode_raw(hdf5_path, mp4_path, target_fps=10):
-    """Load a single EgoDex episode and return (states, frames, description)."""
+    """Load a single Flexa episode and return (states, frames, description)."""
     with h5py.File(hdf5_path, "r") as f:
         n_frames = f["transforms/camera"].shape[0]
         source_fps = 30
@@ -149,12 +149,12 @@ def _get_builder_class(input_dir: str, max_episodes: int, fps: int):
     """Dynamically create the TFDS builder class with captured config."""
     _ensure_tf()
 
-    class EgodexDataset(tfds.core.GeneratorBasedBuilder):
-        """RLDS dataset builder for EgoDex egocentric hand manipulation data."""
+    class FlexaDataset(tfds.core.GeneratorBasedBuilder):
+        """RLDS dataset builder for Flexa egocentric hand manipulation data."""
 
         VERSION = tfds.core.Version("1.0.0")
         RELEASE_NOTES = {
-            "1.0.0": "Initial release — EgoDex hand tracking converted to OXE/RLDS.",
+            "1.0.0": "Initial release — Flexa hand tracking converted to OXE/RLDS.",
         }
 
         def __init__(self, *args, **kwargs):
@@ -221,7 +221,7 @@ def _get_builder_class(input_dir: str, max_episodes: int, fps: int):
                     }),
                     "episode_metadata": tfds.features.FeaturesDict({
                         "file_path": tfds.features.Text(
-                            doc="Path to the original EgoDex HDF5 file.",
+                            doc="Path to the original Flexa HDF5 file.",
                         ),
                         "fps": tfds.features.Scalar(
                             dtype=np.int32,
@@ -295,7 +295,7 @@ def _get_builder_class(input_dir: str, max_episodes: int, fps: int):
 
                 yield str(hdf5_path), sample
 
-    return EgodexDataset
+    return FlexaDataset
 
 
 # ---------------------------------------------------------------------------
@@ -304,7 +304,7 @@ def _get_builder_class(input_dir: str, max_episodes: int, fps: int):
 
 def convert_standalone(input_dir: str, output_dir: str, max_episodes: int, fps: int):
     """
-    Convert EgoDex data to OXE-compatible RLDS TFRecords without requiring
+    Convert Flexa data to OXE-compatible RLDS TFRecords without requiring
     the full tfds build pipeline. Writes TFRecords + metadata directly.
 
     This is useful when you can't install the full TFDS builder infrastructure
@@ -323,7 +323,7 @@ def convert_standalone(input_dir: str, output_dir: str, max_episodes: int, fps: 
     hdf5_files = sorted(Path(input_dir).rglob("*.hdf5"))[:max_episodes]
     print(f"Found {len(hdf5_files)} episodes to convert")
 
-    writer = tf.io.TFRecordWriter(str(output_path / "egodex_dataset-train.tfrecord"))
+    writer = tf.io.TFRecordWriter(str(output_path / "Flexa_dataset-train.tfrecord"))
     episode_count = 0
 
     for hdf5_path in hdf5_files:
@@ -431,7 +431,7 @@ def convert_standalone(input_dir: str, output_dir: str, max_episodes: int, fps: 
     # Write metadata JSON
     import json
     metadata = {
-        "dataset_name": "egodex_dataset",
+        "dataset_name": "Flexa_dataset",
         "format": "OXE/RLDS",
         "version": "1.0.0",
         "n_episodes": episode_count,
@@ -440,7 +440,7 @@ def convert_standalone(input_dir: str, output_dir: str, max_episodes: int, fps: 
         "image_size": IMAGE_SIZE,
         "joints": KEY_JOINTS,
         "description": (
-            "EgoDex egocentric hand manipulation data converted to "
+            "Flexa egocentric hand manipulation data converted to "
             "Open X-Embodiment (RLDS) format. Hand pose from Apple Vision Pro "
             "with 14 key joints (3D position + 6D rotation per joint)."
         ),
@@ -458,12 +458,12 @@ def convert_standalone(input_dir: str, output_dir: str, max_episodes: int, fps: 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert EgoDex to Open X-Embodiment (OXE/RLDS) format"
+        description="Convert Flexa to Open X-Embodiment (OXE/RLDS) format"
     )
-    parser.add_argument("--input", required=True, help="Path to EgoDex data directory")
+    parser.add_argument("--input", required=True, help="Path to Flexa data directory")
     parser.add_argument(
         "--output", default=None,
-        help="Output directory (default: ~/tensorflow_datasets/egodex_dataset)"
+        help="Output directory (default: ~/tensorflow_datasets/Flexa_dataset)"
     )
     parser.add_argument("--max-episodes", type=int, default=50)
     parser.add_argument("--fps", type=int, default=10, help="Target FPS")
@@ -482,9 +482,9 @@ def main():
         )
         builder = BuilderClass(data_dir=args.output or os.path.expanduser("~/tensorflow_datasets"))
         builder.download_and_prepare()
-        print("Done! Dataset available via: tfds.load('egodex_dataset')")
+        print("Done! Dataset available via: tfds.load('Flexa_dataset')")
     else:
-        output = args.output or os.path.expanduser("~/tensorflow_datasets/egodex_dataset")
+        output = args.output or os.path.expanduser("~/tensorflow_datasets/Flexa_dataset")
         convert_standalone(args.input, output, args.max_episodes, args.fps)
 
 

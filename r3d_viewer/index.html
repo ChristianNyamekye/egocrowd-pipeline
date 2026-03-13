@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>EgoCrowd — 3D Hand Skeleton Viewer</title>
+<title>Flexa â€” 3D Hand Skeleton Viewer</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0a0c10; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
@@ -26,12 +26,12 @@
 </head>
 <body>
 <div id="info">
-  <h2>EgoCrowd — 3D Skeleton</h2>
+  <h2>Flexa â€” 3D Skeleton</h2>
   <div>Source: iPhone LiDAR (Record3D)</div>
   <div id="stats">Loading...</div>
 </div>
 <div id="controls">
-  <button id="playBtn">▶ Play</button>
+  <button id="playBtn">â–¶ Play</button>
   <input type="range" id="scrubber" min="0" max="100" value="0">
   <span id="frame-label">0 / 0</span>
   <button id="resetCam">Reset Camera</button>
@@ -158,7 +158,7 @@ function onResize() {
 
 function togglePlay() {
   playing = !playing;
-  document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
+  document.getElementById('playBtn').textContent = playing ? 'â¸ Pause' : 'â–¶ Play';
 }
 
 function onScrub(e) {
@@ -317,3 +317,4 @@ animate(0);
 </script>
 </body>
 </html>
+

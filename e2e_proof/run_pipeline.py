@@ -1,5 +1,5 @@
 """
-DexCrowd End-to-End Pipeline Proof
+flexa End-to-End Pipeline Proof
 ===================================
 Egocentric human video → hand pose → retarget → BC training → MuJoCo rollout
 
@@ -707,7 +707,7 @@ def train_bc_policy(packaged_episodes: list) -> dict:
 # ============================================================
 
 MJCF_MODEL = """
-<mujoco model="dexcrowd_arm">
+<mujoco model="flexa_arm">
   <option timestep="0.002" gravity="0 0 -9.81"/>
   
   <asset>
@@ -864,7 +864,7 @@ def run_mujoco_sim(policy_data: dict, packaged_episodes: list) -> str:
     sim_dir = OUTPUT_DIR / "sim_output"
 
     # Save MJCF model
-    mjcf_path = sim_dir / "dexcrowd_arm.xml"
+    mjcf_path = sim_dir / "flexa_arm.xml"
     with open(mjcf_path, "w") as f:
         f.write(MJCF_MODEL)
 
@@ -1021,7 +1021,7 @@ def run_mujoco_sim(policy_data: dict, packaged_episodes: list) -> str:
         frame_bgr = cv2.cvtColor(pixels, cv2.COLOR_RGB2BGR)
 
         # Add HUD
-        cv2.putText(frame_bgr, f"DexCrowd BC Policy Rollout", (10, 25),
+        cv2.putText(frame_bgr, f"flexa BC Policy Rollout", (10, 25),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 100), 2)
         cv2.putText(frame_bgr, f"Frame {frame_i+1:03d}/{total_frames} | Phase: {phase:.2f}",
                    (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
@@ -1104,7 +1104,7 @@ def save_retargeting_visualization(packaged_episodes: list):
     for sp in ["bottom","left"]: ax2.spines[sp].set_color("#333")
     ax2.grid(alpha=0.15, color="white")
 
-    plt.suptitle("DexCrowd: Human→Robot Retargeting  |  Allegro Hand 16-DoF", 
+    plt.suptitle("flexa: Human→Robot Retargeting  |  Allegro Hand 16-DoF", 
                  color="white", fontsize=13, y=1.01, fontweight="bold")
     plt.tight_layout()
 
@@ -1157,7 +1157,7 @@ def save_training_curve(policy_data: dict):
     ax2.grid(alpha=0.15, color="white", which="both")
     ax2.legend(framealpha=0.3, labelcolor="white")
 
-    plt.suptitle("DexCrowd BC Policy  |  MLP 23→256→256→128→23  |  AdamW + CosineAnnealing",
+    plt.suptitle("flexa BC Policy  |  MLP 23→256→256→128→23  |  AdamW + CosineAnnealing",
                  color="white", fontsize=11, fontweight="bold")
     plt.tight_layout()
 
@@ -1252,7 +1252,7 @@ def save_demo_summary_panel(results: dict):
     ax6.set_facecolor("#161b22")
     ax6.axis("off")
     stats = [
-        ("Pipeline", "DexCrowd E2E Proof"),
+        ("Pipeline", "flexa E2E Proof"),
         ("", ""),
         ("Clips", f"{results.get('num_clips', 0)} synthetic egocentric"),
         ("Episodes", f"{results.get('num_episodes', 0)} packaged"),
@@ -1276,7 +1276,7 @@ def save_demo_summary_panel(results: dict):
                 fontsize=8.5, va="top", fontfamily="monospace")
     ax6.set_title("Pipeline Stats", color="white", fontsize=9, pad=4)
 
-    plt.suptitle("DexCrowd — Egocentric Video → Robot Manipulation (End-to-End Proof)",
+    plt.suptitle("flexa — Egocentric Video → Robot Manipulation (End-to-End Proof)",
                  color="white", fontsize=13, fontweight="bold", y=1.01)
 
     panel_path = OUTPUT_DIR / "DEMO_SUMMARY.png"
@@ -1292,7 +1292,7 @@ def save_demo_summary_panel(results: dict):
 
 def main():
     log("=" * 70)
-    log("DexCrowd End-to-End Pipeline Proof")
+    log("flexa End-to-End Pipeline Proof")
     log("=" * 70)
     log(f"Output dir: {OUTPUT_DIR}")
     log("")

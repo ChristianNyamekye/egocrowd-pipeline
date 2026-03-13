@@ -1,7 +1,7 @@
 """
 LeRobot (our format) → LingBot-VLA Compatible Dataset Converter
 
-Bridges the gap between our egodex_to_lerobot.py output and what LingBot-VLA
+Bridges the gap between our Flexa_to_lerobot.py output and what LingBot-VLA
 expects for post-training/fine-tuning.
 
 Gaps addressed:
@@ -33,7 +33,7 @@ except ImportError:
 
 
 def load_our_dataset(input_dir: Path):
-    """Load the .npy + images output from egodex_to_lerobot.py"""
+    """Load the .npy + images output from Flexa_to_lerobot.py"""
     input_dir = Path(input_dir)
 
     states = np.load(input_dir / "observation_state.npy")       # (N, state_dim)
@@ -204,7 +204,7 @@ def convert_to_lingbot(input_dir, output_dir, max_action_dim=75, max_state_dim=7
     meta["padded_action_dim"] = max_action_dim
     meta["image_views"] = ["cam_high", "cam_left_wrist", "cam_right_wrist"]
     meta["note"] = (
-        "Converted from EgoDex egocentric hand data. cam_high = egocentric view. "
+        "Converted from Flexa egocentric hand data. cam_high = egocentric view. "
         "Wrist cams are duplicates of egocentric view (no real wrist cameras in source data). "
         "State is flattened hand joint poses (14 joints × 9 = 126 dims, zero-padded to 75). "
         "Action is delta state between consecutive frames."
@@ -221,7 +221,7 @@ def convert_to_lingbot(input_dir, output_dir, max_action_dim=75, max_state_dim=7
 
 def main():
     parser = argparse.ArgumentParser(description="Convert our LeRobot output to LingBot-VLA format")
-    parser.add_argument("--input", required=True, help="Path to egodex_to_lerobot.py output dir")
+    parser.add_argument("--input", required=True, help="Path to Flexa_to_lerobot.py output dir")
     parser.add_argument("--output", required=True, help="Output directory for LingBot-VLA format")
     parser.add_argument("--max-action-dim", type=int, default=75, help="LingBot max action dim")
     parser.add_argument("--max-state-dim", type=int, default=75, help="LingBot max state dim")

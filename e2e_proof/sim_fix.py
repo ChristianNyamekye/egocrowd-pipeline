@@ -31,7 +31,7 @@ OUTPUT_DIR = Path(__file__).parent / "sim_output"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 MJCF_MODEL = """
-<mujoco model="dexcrowd_arm_v2">
+<mujoco model="flexa_arm_v2">
   <option timestep="0.002" gravity="0 0 -9.81" integrator="RK4"/>
   
   <visual>
@@ -285,7 +285,7 @@ def run_sim():
         sys.exit(1)
     
     # Load model
-    mjcf_path = OUTPUT_DIR / "dexcrowd_arm_v2.xml"
+    mjcf_path = OUTPUT_DIR / "flexa_arm_v2.xml"
     with open(mjcf_path, "w") as f:
         f.write(MJCF_MODEL)
     
@@ -368,7 +368,7 @@ def run_sim():
         
         # HUD overlay
         cv2.rectangle(bgr, (0, 0), (640, 56), (0, 0, 0), -1)
-        cv2.putText(bgr, f"DexCrowd Sim — MuJoCo 3.5  |  BC Policy Rollout",
+        cv2.putText(bgr, f"flexa Sim — MuJoCo 3.5  |  BC Policy Rollout",
                     (10, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (80, 200, 255), 1, cv2.LINE_AA)
         cv2.putText(bgr, f"Phase: {phase:<12}  |  t={t_sec:.1f}s  |  Palm XYZ: ({palm_pos[0]:.3f}, {palm_pos[1]:.3f}, {palm_pos[2]:.3f})",
                     (10, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (160, 255, 160), 1, cv2.LINE_AA)

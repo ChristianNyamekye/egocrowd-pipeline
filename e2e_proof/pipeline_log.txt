@@ -1,5 +1,5 @@
 [2026-02-24 23:58:03] ======================================================================
-[2026-02-24 23:58:03] DexCrowd End-to-End Pipeline Proof
+[2026-02-24 23:58:03] flexa End-to-End Pipeline Proof
 [2026-02-24 23:58:03] ======================================================================
 [2026-02-24 23:58:03] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
 [2026-02-24 23:58:03] 
@@ -8,7 +8,7 @@
 [2026-02-24 23:58:12] 
 [2026-02-24 23:58:12] STEP 2: Extracting hand poses with MediaPipe...
 [2026-02-25 00:00:47] ======================================================================
-[2026-02-25 00:00:47] DexCrowd End-to-End Pipeline Proof
+[2026-02-25 00:00:47] flexa End-to-End Pipeline Proof
 [2026-02-25 00:00:47] ======================================================================
 [2026-02-25 00:00:47] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
 [2026-02-25 00:00:47] 
@@ -50,7 +50,7 @@
 [2026-02-25 00:01:25]   Average detection rate: 0.0%
 [2026-02-25 00:01:25] 
 [2026-02-25 00:02:03] ======================================================================
-[2026-02-25 00:02:03] DexCrowd End-to-End Pipeline Proof
+[2026-02-25 00:02:03] flexa End-to-End Pipeline Proof
 [2026-02-25 00:02:03] ======================================================================
 [2026-02-25 00:02:03] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
 [2026-02-25 00:02:03] 
@@ -103,7 +103,7 @@
 [2026-02-25 00:02:54] 
 [2026-02-25 00:02:54] STEP 3b: Saving retargeting visualization...
 [2026-02-25 00:03:15] ======================================================================
-[2026-02-25 00:03:15] DexCrowd End-to-End Pipeline Proof
+[2026-02-25 00:03:15] flexa End-to-End Pipeline Proof
 [2026-02-25 00:03:15] ======================================================================
 [2026-02-25 00:03:15] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
 [2026-02-25 00:03:15] 
@@ -173,7 +173,7 @@
 [2026-02-25 00:04:35] STEP 5: MuJoCo simulation rollout...
 [2026-02-25 00:04:35]   MuJoCo model loaded: 23 DoF, 16 actuators
 [2026-02-25 00:04:47] ======================================================================
-[2026-02-25 00:04:47] DexCrowd End-to-End Pipeline Proof
+[2026-02-25 00:04:47] flexa End-to-End Pipeline Proof
 [2026-02-25 00:04:47] ======================================================================
 [2026-02-25 00:04:47] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
 [2026-02-25 00:04:47] 
@@ -243,7 +243,7 @@
 [2026-02-25 00:05:48] STEP 5: MuJoCo simulation rollout...
 [2026-02-25 00:05:48]   MuJoCo model loaded: 23 DoF, 16 actuators
 [2026-02-25 00:05:59] ======================================================================
-[2026-02-25 00:05:59] DexCrowd End-to-End Pipeline Proof
+[2026-02-25 00:05:59] flexa End-to-End Pipeline Proof
 [2026-02-25 00:05:59] ======================================================================
 [2026-02-25 00:05:59] Output dir: C:\Users\chris\clawd\pipeline\e2e_proof
 [2026-02-25 00:05:59] 
@@ -343,7 +343,7 @@
 ======================================================================
 FINAL DEMO VIDEO BUILD
 ======================================================================
-[2026-02-25 00:13:18] Demo video built: DEXCROWD_PIPELINE_DEMO.mp4 (13.1 MB, ~50s)
+[2026-02-25 00:13:18] Demo video built: flexa_PIPELINE_DEMO.mp4 (13.1 MB, ~50s)
 [2026-02-25 00:13:18] Discord posts: 6 messages sent to #sim-work (1474836209808445765)
   - Text summary + step breakdown
   - MediaPipe overlay image (pov_cook_sample2)
@@ -358,9 +358,9 @@ ARTIFACT INVENTORY:
   hand_pose_overlays/  2 MediaPipe skeleton overlays (real kitchen video)
   dataset/             LeRobot JSON (1.9MB) + RLDS JSON + NumPy arrays
   model/               bc_policy.pt (432KB) + training_curve.png
-  sim_output/          dexcrowd_arm.xml + rollout.mp4 (586KB)
+  sim_output/          flexa_arm.xml + rollout.mp4 (586KB)
   DEMO_SUMMARY.png     Full pipeline panel (6 stages)
-  DEXCROWD_PIPELINE_DEMO.mp4  50s animated walkthrough (13.1MB)
+  flexa_PIPELINE_DEMO.mp4  50s animated walkthrough (13.1MB)
   pipeline_log.txt     Full timestamped run log
 
 ======================================================================
