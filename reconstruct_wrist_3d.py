@@ -198,7 +198,7 @@ def process_session(session):
     # TRK-05: Detect if HaMeR 3D wrist data is available
     has_hamer_3d = any(t.get("wrist_3d_camera") for t in ts)
     if has_hamer_3d:
-        print(f"  Using HaMeR 3D wrist output (TRK-05: skip depth unprojection)")
+        print(f"  HaMeR detected (TRK-05: using grasping signal, depth unprojection for position)")
     else:
         print(f"  Using depth-map unprojection (MediaPipe mode)")
 
@@ -216,15 +216,12 @@ def process_session(session):
 
         r3d_idx = min(int(i * fps_ratio), len(meta["poses"]) - 1)
 
-        # TRK-05: Use HaMeR 3D wrist when available (skip depth lookup)
+        # TRK-05: HaMeR provides grasping signal; wrist position uses depth unprojection
+        # (wrist_3d_camera is crop-relative and NOT useful for world position)
         if t.get("wrist_3d_camera"):
-            point_cam = np.array(t["wrist_3d_camera"])
-            pose_idx = min(r3d_idx, len(meta["poses"]) - 1)
-            pose = meta["poses"][pose_idx]
-            point = cam_to_world(point_cam, pose)
-            wrist_3d_world.append(point.tolist())
-            grasping.append(t.get("grasping", False))
-            continue
+            # Grasping flag from HaMeR finger-tip distance is valid — extract it
+            # but do NOT use wrist_3d_camera for position; fall through to depth unproject
+            pass
 
         # Fallback: depth-map unprojection (MediaPipe path)
         if wp is None:
