@@ -294,7 +294,7 @@ def render_task(task_name: str):
     else:
         place_xy0 = pick_xy0 + np.array([0.12, -0.08])
 
-renderer = mujoco.Renderer(model, RENDER_H, RENDER_W)
+    renderer = mujoco.Renderer(model, RENDER_H, RENDER_W)
     fd = OUT_DIR / f"_{task_name}_g1v10_frames"
     if fd.exists():
         shutil.rmtree(fd)
