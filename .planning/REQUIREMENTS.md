@@ -66,11 +66,11 @@ Requirements for True Retargeting & Quality milestone. Each maps to roadmap phas
 | RET-02 | 2 | Complete |
 | RET-03 | 2 | Complete |
 | RET-04 | 2 | Complete |
-| TRK-04 | 3 | Pending |
-| TRK-05 | 3 | Pending |
-| OUT-03 | 3 | Pending |
-| OUT-04 | 3 | Pending |
-| OUT-05 | 3 | Pending |
+| TRK-04 | 3 | Complete (deploy deferred) |
+| TRK-05 | 3 | Complete |
+| OUT-03 | 3 | Complete |
+| OUT-04 | 3 | Complete |
+| OUT-05 | 3 | Complete |
 
 **Coverage:**
 - v0.3 requirements: 14 total
