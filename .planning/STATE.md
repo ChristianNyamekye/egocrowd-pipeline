@@ -4,7 +4,7 @@ milestone: v0.3
 milestone_name: milestone
 status: verifying
 last_updated: "2026-03-14T16:00:00Z"
-last_activity: 2026-03-14 — Completed quick task 18: Re-run pipeline+sim with cleaned calibration — STACKED=False, minimal impact (RMS=0.098m)
+last_activity: 2026-03-14 — Completed quick task 19: 2-pass iterative calibration — STACKED=False, palm min dist 9.3cm, need attraction bias
 progress:
   total_phases: 3
   completed_phases: 3
@@ -39,6 +39,7 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 - [x] QT-016: Re-run pipeline+sim with dual proximity gates — STACKED=False, IK bottleneck (RMS=0.099m)
 - [x] QT-017: Clean grasping in calibration — debounce before grasp centroid anchor
 - [x] QT-018: Re-run pipeline+sim with cleaned calibration — STACKED=False, minimal impact (RMS=0.098m)
+- [x] QT-019: 2-pass iterative calibration — STACKED=False, palm min dist 9.3cm, need attraction bias
 
 ### Quick Tasks Completed
 
@@ -61,7 +62,8 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 | 15 | Sim-side proximity gate — close fingers only when palm < 5cm | 2026-03-14 | 5fc98f7 | [15-sim-side-proximity-gate-close-fingers-on](./quick/15-sim-side-proximity-gate-close-fingers-on/) |
 | 16 | Re-run pipeline+sim with dual proximity gates — STACKED=False (IK bottleneck) | 2026-03-14 | — | [16-re-run-pipeline-and-sim-with-dual-proxim](./quick/16-re-run-pipeline-and-sim-with-dual-proxim/) |
 | 17 | Clean grasping in calibration — debounce before grasp centroid anchor | 2026-03-14 | 058f835 | [17-clean-grasping-in-calibration-debounce-b](./quick/17-clean-grasping-in-calibration-debounce-b/) |
-| 18 | Re-run pipeline+sim — cleaned cal, STACKED=False (minimal impact) | 2026-03-14 | — | [18-re-run-pipeline-and-sim-with-cleaned-cal](./quick/18-re-run-pipeline-and-sim-with-cleaned-cal/) |
+| 18 | Re-run pipeline+sim — cleaned cal, STACKED=False (minimal impact) | 2026-03-14 | 78b025b | [18-re-run-pipeline-and-sim-with-cleaned-cal](./quick/18-re-run-pipeline-and-sim-with-cleaned-cal/) |
+| 19 | 2-pass iterative calibration — palm min dist 9.3cm, STACKED=False | 2026-03-14 | c918d3d | [19-iterative-calibration-2-pass-centroid-re](./quick/19-iterative-calibration-2-pass-centroid-re/) |
 
 ## Project Reference
 
