@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: verifying
-last_updated: "2026-03-14T14:00:00Z"
-last_activity: 2026-03-14 — Completed quick task 13: Proximity-gated grasping — only flag grip when wrist < 15cm from object
+last_updated: "2026-03-14T15:00:00Z"
+last_activity: 2026-03-14 — Completed quick task 14: Pipeline re-run with proximity gating — grasping 66%->17%, STACKED=False (IK bottleneck)
 progress:
   total_phases: 3
   completed_phases: 3
@@ -34,6 +34,7 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 - [x] QT-011: Fix grasping signal — post-hoc temporal filter + tighten HaMeR threshold
 - [x] QT-012: Re-run pipeline with grasping fix — STACKED=False, grasping signal still 90% True in trimmed window
 - [x] QT-013: Proximity-gated grasping — only flag grip when wrist < 15cm from object
+- [x] QT-014: Re-run pipeline with proximity gating — STACKED=False, grasping 66%->17%, IK bottleneck
 
 ### Quick Tasks Completed
 
@@ -52,13 +53,14 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 | 11 | Fix grasping signal — temporal filter + tighten threshold | 2026-03-14 | 33b9568 | [11-fix-grasping-signal-post-hoc-temporal-fi](./quick/11-fix-grasping-signal-post-hoc-temporal-fi/) |
 | 12 | Re-run pipeline — STACKED=False, grasping still noisy | 2026-03-14 | 06dbd93 | [12-re-run-pipeline-with-grasping-fix-and-ve](./quick/12-re-run-pipeline-with-grasping-fix-and-ve/) |
 | 13 | Proximity-gated grasping — wrist < 15cm from object | 2026-03-14 | c8cb2b2 | [13-proximity-gated-grasping-only-flag-grip-](./quick/13-proximity-gated-grasping-only-flag-grip-/) |
+| 14 | Re-run pipeline — grasping 66%->17%, STACKED=False (IK bottleneck) | 2026-03-14 | — | [14-re-run-pipeline-with-proximity-gated-gra](./quick/14-re-run-pipeline-with-proximity-gated-gra/) |
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-14)
 
 **Core value:** The robot must faithfully reproduce the human's actual hand motion — true retargeting, not choreographed animation.
-**Current focus:** Proximity-gated grasping implemented (QT-013). Need pipeline re-run to verify grasping signal is now accurate near objects only.
+**Current focus:** Proximity gating verified (QT-014): grasping 66%->17%, grip events now near objects. STACKED=False persists — bottleneck is IK tracking (RMS=0.099m, 42% frames >2cm error). Need sim-side proximity gate + IK improvement.
 
 ## Accumulated Context
 
@@ -127,6 +129,16 @@ See: .planning/PROJECT.md (updated 2026-03-14)
   - 90% of trimmed frames are grip=True — aspect-ratio heuristic is unreliable
   - IK: RMS=0.099m, 146/300 frames with >2cm error, 105/300 clamped
   - Next: fix grasping detection (use hand pose or proximity-gating)
+- QT-014 verification: pipeline re-run with proximity-gated grasping
+  - GRASP PROXIMITY: 66% -> 17% (49pt drop, 74% of false positives eliminated)
+  - GRASP CLEAN: 146/951 (15%), onset frame=168
+  - Sim debounced: 19 raw -> 57/295 (19%, down from 90% in QT-012)
+  - Trim window [423,718), 295 frames, 29.5s
+  - Clear False->True grasping transition now visible (F000-F029 open, F030 first grip)
+  - Blocks stay on table (no knockoff like QT-012), but never stacked
+  - STACKED=False — grip events occur at 0.13-0.18m from blocks (too far for physics grasp)
+  - IK unchanged: RMS=0.099m, 124/295 >2cm, 116/295 clamped
+  - Bottleneck shifted from grasping signal to IK precision + sim-side proximity gate
 
 ## Decisions Log
 
