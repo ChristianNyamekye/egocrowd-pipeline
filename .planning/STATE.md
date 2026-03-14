@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: verifying
-last_updated: "2026-03-14T15:00:00Z"
-last_activity: 2026-03-14 — Completed quick task 17: Clean grasping in calibration — debounce before grasp centroid anchor
+last_updated: "2026-03-14T16:00:00Z"
+last_activity: 2026-03-14 — Completed quick task 18: Re-run pipeline+sim with cleaned calibration — STACKED=False, minimal impact (RMS=0.098m)
 progress:
   total_phases: 3
   completed_phases: 3
@@ -38,6 +38,7 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 - [x] QT-015: Sim-side proximity gate — close fingers only when palm < 5cm from block
 - [x] QT-016: Re-run pipeline+sim with dual proximity gates — STACKED=False, IK bottleneck (RMS=0.099m)
 - [x] QT-017: Clean grasping in calibration — debounce before grasp centroid anchor
+- [x] QT-018: Re-run pipeline+sim with cleaned calibration — STACKED=False, minimal impact (RMS=0.098m)
 
 ### Quick Tasks Completed
 
@@ -60,13 +61,14 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 | 15 | Sim-side proximity gate — close fingers only when palm < 5cm | 2026-03-14 | 5fc98f7 | [15-sim-side-proximity-gate-close-fingers-on](./quick/15-sim-side-proximity-gate-close-fingers-on/) |
 | 16 | Re-run pipeline+sim with dual proximity gates — STACKED=False (IK bottleneck) | 2026-03-14 | — | [16-re-run-pipeline-and-sim-with-dual-proxim](./quick/16-re-run-pipeline-and-sim-with-dual-proxim/) |
 | 17 | Clean grasping in calibration — debounce before grasp centroid anchor | 2026-03-14 | 058f835 | [17-clean-grasping-in-calibration-debounce-b](./quick/17-clean-grasping-in-calibration-debounce-b/) |
+| 18 | Re-run pipeline+sim — cleaned cal, STACKED=False (minimal impact) | 2026-03-14 | — | [18-re-run-pipeline-and-sim-with-cleaned-cal](./quick/18-re-run-pipeline-and-sim-with-cleaned-cal/) |
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-14)
 
 **Core value:** The robot must faithfully reproduce the human's actual hand motion — true retargeting, not choreographed animation.
-**Current focus:** Dual proximity gates verified (QT-016): trajectory-side 15cm + sim-side 5cm both working correctly. Grasping reduced to 17% (was 90%). STACKED=False persists — **IK/calibration is the bottleneck** (RMS=0.099m, 42% IK failures, 39% clamped). Palm never reaches < 5cm from block. Next: fix calibration/IK.
+**Current focus:** Calibration debounce (QT-017) had minimal impact (QT-018): grasp centroid 558 vs 630 frames, RMS 0.098m vs 0.099m, min palm-block dist 8.7cm vs 9.6cm. STACKED=False persists — **IK/calibration is the bottleneck** (RMS=0.098m, 45% IK failures, 39% clamped). Palm never reaches < 5cm from block. Next: fix calibration offset or IK solver.
 
 ## Accumulated Context
 
@@ -145,6 +147,13 @@ See: .planning/PROJECT.md (updated 2026-03-14)
   - STACKED=False — grip events occur at 0.13-0.18m from blocks (too far for physics grasp)
   - IK unchanged: RMS=0.099m, 124/295 >2cm, 116/295 clamped
   - Bottleneck shifted from grasping signal to IK precision + sim-side proximity gate
+- QT-018 verification: pipeline re-run with cleaned calibration anchor (debounce)
+  - Grasp centroid: 558 frames (was 630), centroid barely shifted
+  - RMS: 0.098m (was 0.099m), IK failures: 45% (was 42%), clamped: 39% (same)
+  - Min palm-block: 8.7cm (was 9.6cm) — still above 5cm gate
+  - block_a knocked off table at ~F100 (same failure mode as QT-016)
+  - Grip passed gate: 0 (same), STACKED=False (same)
+  - Conclusion: calibration debounce is not the bottleneck; IK/calibration offset is
 
 ## Decisions Log
 
