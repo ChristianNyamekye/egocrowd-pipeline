@@ -4,7 +4,7 @@ milestone: v0.3
 milestone_name: milestone
 status: verifying
 last_updated: "2026-03-14T14:00:00Z"
-last_activity: 2026-03-14 — Completed quick task 6: Fix HaMeR calibration — use wrist_pixel depth unprojection
+last_activity: 2026-03-14 — Completed quick task 7: Validator diagnostics + pipeline re-test (STACKED=False — trim window issue)
 progress:
   total_phases: 3
   completed_phases: 3
@@ -27,6 +27,7 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 - [x] QT-004: Replace kinematic attachment with physics-based grasping
 - [x] QT-005: Fix HaMeR mesh model loading on Modal
 - [x] QT-006: Fix HaMeR calibration — use wrist_pixel depth unprojection
+- [x] QT-007: Validator diagnostics + pipeline re-test (STACKED=False — trim window lacks approach phase)
 
 ### Quick Tasks Completed
 
@@ -38,6 +39,7 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 | 4 | Replace kinematic attachment with physics-based grasping | 2026-03-14 | 4e94895 | [4-replace-kinematic-attachment-with-physic](./quick/4-replace-kinematic-attachment-with-physic/) |
 | 4 | Replace kinematic attachment with physics-based grasping | 2026-03-14 | 4e94895 | [4-replace-kinematic-attachment-with-physic](./quick/4-replace-kinematic-attachment-with-physic/) |
 | 6 | Fix HaMeR calibration — use wrist_pixel depth unprojection | 2026-03-14 | 8fde274 | [6-fix-hamer-calibration-use-wrist-pixel-de](./quick/6-fix-hamer-calibration-use-wrist-pixel-de/) |
+| 7 | Validator diagnostics + pipeline re-test (STACKED=False) | 2026-03-14 | 598f335 | [7-pinocchio-validator-diagnostics-full-pip](./quick/7-pinocchio-validator-diagnostics-full-pip/) |
 
 ## Project Reference
 
@@ -90,6 +92,9 @@ See: .planning/PROJECT.md (updated 2026-03-14)
   - Calibration mismatch FIXED: wrist_3d_camera was crop-relative; now uses depth unprojection (X=[0.196,0.546])
   - Pipeline completes all 7 stages with --hamer flag
   - Simulation renders successfully (robot grasps and moves block, STACKED=False)
+  - QT-007 diagnostics: HaMeR IK error=0.108m (vs MediaPipe 0.115m — marginal improvement)
+  - STACKED=False root cause: trim window [568,837) captures only grip-phase frames (all grip=True), no approach phase
+  - Next: fix trim to include approach phase, investigate calibration scale (0.222) compressing motion
 - Phase 3 plan 02 code complete: grasp visual quality
   - FINGER_PRESHAPE constant + PRESHAPE_DIST_START/FULL thresholds
   - Distance-based finger pre-shaping with quadratic ease-in during approach
