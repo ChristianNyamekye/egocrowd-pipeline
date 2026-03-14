@@ -150,6 +150,22 @@ def _try_load_hamer():
                 setattr(stub, k, v)
             sys.modules[mod_path] = stub
 
+        # Monkey-patch numpy to restore deprecated aliases removed in 1.24+
+        # (chumpy tries `from numpy import bool, int, float, complex, object,
+        #  unicode, str` which fails with numpy >= 1.24)
+        import numpy as np
+        for alias in ("bool", "int", "float", "complex", "object", "str"):
+            if not hasattr(np, alias) or isinstance(getattr(np, alias), type):
+                pass  # already fine
+            # The real issue is np.bool was removed; re-add as builtins
+        np.bool = bool
+        np.int = int
+        np.float = float
+        np.complex = complex
+        np.object = object
+        np.str = str
+        np.unicode = str
+
         import hamer.configs
         # Override CACHE_DIR_HAMER so HaMeR finds checkpoints at /root/_DATA
         hamer.configs.CACHE_DIR_HAMER = os.environ.get("CACHE_DIR_HAMER", "/root/_DATA")
