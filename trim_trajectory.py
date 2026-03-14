@@ -10,9 +10,10 @@ import numpy as np
 from pathlib import Path
 
 
-def clean_grasping_signal(grasping, min_run=5):
-    """Post-process raw grasping array: debounce + clear pre-onset noise.
+def clean_grasping_signal(grasping, min_run=5, wrist_positions=None, object_positions=None, proximity_threshold=0.15):
+    """Post-process raw grasping array: proximity gate + debounce + clear pre-onset noise.
 
+    0. Proximity gate (optional): zero out grasping where wrist > threshold from all objects.
     1. Debounce: require min_run consecutive True frames (0.5s at 10fps).
        Short bursts shorter than min_run become False.
     2. Find sustained onset: first run of min_run+ consecutive True frames.
@@ -21,6 +22,9 @@ def clean_grasping_signal(grasping, min_run=5):
     Args:
         grasping: np.array of floats (0/1) — raw grasping signal
         min_run: minimum consecutive True frames to count as real grasp
+        wrist_positions: np.array of shape (N, 3) — wrist positions per frame (optional)
+        object_positions: np.array of shape (M, 3) — object positions (optional)
+        proximity_threshold: max distance (meters) for grasping to be valid
 
     Returns:
         np.array of floats (0/1) — cleaned grasping signal
@@ -32,6 +36,18 @@ def clean_grasping_signal(grasping, min_run=5):
 
     orig_count = int(np.sum(cleaned > 0))
     orig_pct = orig_count / n * 100 if n > 0 else 0
+
+    # Step 0: Proximity gate — only allow grasping when wrist is near an object
+    if wrist_positions is not None and object_positions is not None and len(object_positions) > 0:
+        for i in range(n):
+            if cleaned[i] > 0:
+                wrist = wrist_positions[i]
+                min_dist = min(np.linalg.norm(wrist - obj) for obj in object_positions)
+                if min_dist > proximity_threshold:
+                    cleaned[i] = 0
+        prox_count = int(np.sum(cleaned > 0))
+        prox_pct = prox_count / n * 100
+        print(f"  GRASP PROXIMITY: {orig_count}/{n} ({orig_pct:.0f}%) -> {prox_count}/{n} ({prox_pct:.0f}%) (threshold={proximity_threshold}m)")
 
     # Step 1: Debounce — remove runs of True shorter than min_run
     i = 0
@@ -252,7 +268,12 @@ def trim_calibrated_data(calib_path, start=None, end=None, fps=10):
 
     # Clean grasping signal before detection/slicing
     grasping_arr = np.array(grasping, dtype=float)
-    grasping_arr = clean_grasping_signal(grasping_arr)
+    objects_sim = calib.get("objects_sim", [])
+    grasping_arr = clean_grasping_signal(
+        grasping_arr,
+        wrist_positions=np.array(wrist_sim),
+        object_positions=np.array(objects_sim) if objects_sim else None,
+    )
     grasping = grasping_arr.tolist()
     calib["grasping"] = grasping
 
