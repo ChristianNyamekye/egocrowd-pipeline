@@ -4,14 +4,15 @@ The sim has:
 - Robot base at origin (0,0,0)
 - Table at varying heights per robot
 - Objects on table
-- Workspace roughly x=[0.3,0.7], y=[-0.3,0.3], z=[0.4,0.8]
+- Workspace roughly x=[0.3,0.7], y=[-0.3,0.3], z=[0.78,1.2]
 
 The R3D world has:
 - Some arbitrary origin based on ARKit/Record3D
 - Objects and wrist in that frame
 
-Strategy: use detected object positions as anchor points to compute
-a transform (scale + offset) from R3D → sim coordinates.
+Strategy: use grasp centroid as anchor point to align the wrist trajectory
+with detected/manual object positions. Scale=1.0 because R3D depth data
+is physical meters from Apple LiDAR.
 """
 import json
 import numpy as np
@@ -23,7 +24,7 @@ WRIST_DIR = CALIB_DIR
 DET_DIR = OBJECT_DET_DIR
 
 # Sim workspace (where objects should be)
-SIM_TABLE_Z = 0.43  # block center height on table
+SIM_TABLE_Z = 0.81  # block center height on G1 table (0.78 + BLOCK_HALF 0.03)
 SIM_CENTER_X = 0.50  # center of workspace
 SIM_CENTER_Y = 0.00  # center of workspace
 
@@ -57,7 +58,7 @@ def calibrate_session(session_name, wrist_dir=None, det_dir=None):
     print(f"\n{'='*50}")
     print(f"Calibration: {session_name}")
 
-    # Load detected objects
+    # Load detected objects (full dicts, not just positions)
     det_path = det_dir / f"{session_name}_objects_clean.json"
     if not det_path.exists():
         print(f"  No detections at {det_path}")
@@ -76,72 +77,68 @@ def calibrate_session(session_name, wrist_dir=None, det_dir=None):
     wrist = np.array(wrist_data["wrist_world_smooth"])
     grasping = wrist_data["grasping"]
 
-    # Object positions in R3D world
-    obj_positions = []
+    # --- Object positions: handle manual vs detected ---
+    obj_sim_positions = []
     for det in dets:
-        if "pos_world" in det:
-            obj_positions.append(det["pos_world"])
-    obj_positions = np.array(obj_positions) if obj_positions else None
+        if "pos_world" not in det:
+            continue
+        pos = det["pos_world"]
+        if det.get("source") == "manual":
+            # Manual objects are already in sim coordinates — no axis swap
+            obj_sim_positions.append(np.array(pos))
+            print(f"  Object '{det.get('label', '?')}': manual (sim coords) "
+                  f"({pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f})")
+        else:
+            # Detected objects (GroundingDINO) are in R3D world — axis swap
+            sim_pos = r3d_to_sim_axes(np.array(pos))
+            obj_sim_positions.append(sim_pos)
+            print(f"  Object '{det.get('label', '?')}': detected (R3D→sim) "
+                  f"({sim_pos[0]:.3f}, {sim_pos[1]:.3f}, {sim_pos[2]:.3f})")
 
-    if obj_positions is not None:
-        print(f"  Objects ({len(obj_positions)}):")
-        for i, pos in enumerate(obj_positions):
-            print(f"    Obj{i}: ({pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f})")
-
-    # Wrist during grasp frames
-    grasp_frames = [i for i, g in enumerate(grasping) if g]
-    if grasp_frames:
-        grasp_wrist = wrist[grasp_frames]
-        print(f"  Wrist during grasps ({len(grasp_frames)} frames):")
-        print(f"    Mean: ({grasp_wrist[:,0].mean():.3f}, {grasp_wrist[:,1].mean():.3f}, {grasp_wrist[:,2].mean():.3f})")
-
-    if obj_positions is None or len(obj_positions) == 0:
+    if not obj_sim_positions:
         print("  No object positions available for calibration")
         return None
 
-    # Object centroid in R3D
-    obj_centroid_r3d = obj_positions.mean(axis=0)
+    objs_sim = np.array(obj_sim_positions)
+    obj_centroid_sim = objs_sim.mean(axis=0)
+    print(f"  Object centroid (sim): ({obj_centroid_sim[0]:.3f}, "
+          f"{obj_centroid_sim[1]:.3f}, {obj_centroid_sim[2]:.3f})")
 
-    # Target centroid in sim
-    obj_centroid_sim = np.array([SIM_CENTER_X, SIM_CENTER_Y, SIM_TABLE_Z])
-
-    # Convert all coordinates to sim axes
-    obj_sim_axes = r3d_to_sim_axes(obj_positions)
+    # --- Wrist axis swap (always R3D world coords) ---
     wrist_sim_axes = r3d_to_sim_axes(wrist)
 
-    # Object centroid in sim axes
-    obj_centroid_sim_axes = obj_sim_axes.mean(axis=0)
+    # --- Scale = 1.0 (R3D is physical meters from Apple LiDAR) ---
+    scale = 1.0
 
-    # Scale: match wrist range to reasonable sim range (~0.35m)
-    wrist_range = np.array([
-        wrist_sim_axes[:, ax].max() - wrist_sim_axes[:, ax].min()
-        for ax in range(3)
-    ])
-    target_range = 0.35
-    if wrist_range.max() > 0.01:
-        scale = target_range / wrist_range.max()
-    else:
-        scale = 1.0
+    # --- Anchor via grasp centroid ---
+    grasp_frames = [i for i, g in enumerate(grasping) if g]
+    if not grasp_frames:
+        print("  WARNING: No grasp frames found, using full trajectory centroid")
+        grasp_frames = list(range(len(grasping)))
 
-    # Offset: place object centroid at sim workspace center
-    offset = obj_centroid_sim - obj_centroid_sim_axes * scale
+    grasp_centroid = wrist_sim_axes[grasp_frames].mean(axis=0)
+    print(f"  Grasp centroid ({len(grasp_frames)} frames): "
+          f"({grasp_centroid[0]:.3f}, {grasp_centroid[1]:.3f}, {grasp_centroid[2]:.3f})")
+
+    # Offset: shift so grasp centroid aligns with object centroid
+    offset = obj_centroid_sim - grasp_centroid
+    wrist_sim = wrist_sim_axes + offset
 
     print(f"\n  Transform:")
     print(f"    Axis swap: R3D(X,Y,Z) → sim(-Z,-X,Y)")
     print(f"    Scale: {scale:.3f}")
+    print(f"    Anchor: grasp_centroid")
     print(f"    Offset: ({offset[0]:.3f}, {offset[1]:.3f}, {offset[2]:.3f})")
 
-    # Apply
-    wrist_sim = wrist_sim_axes * scale + offset
-    objs_sim = obj_sim_axes * scale + offset
-
-    # CRITICAL: Force object Z to table height (0.425)
-    TABLE_Z = 0.425
+    # --- Z correction: force objects to table height ---
+    G1_TABLE_HEIGHT = 0.78
+    TABLE_Z = G1_TABLE_HEIGHT + 0.03  # block center (BLOCK_HALF = 0.03)
     z_correction = TABLE_Z - objs_sim[:, 2].mean()
     objs_sim[:, 2] = TABLE_Z
     wrist_sim[:, 2] += z_correction
 
-    print(f"\n  Transformed objects:")
+    print(f"\n  Z correction: {z_correction:+.3f}")
+    print(f"  Transformed objects:")
     for i, pos in enumerate(objs_sim):
         print(f"    Obj{i}: ({pos[0]:.3f}, {pos[1]:.3f}, {pos[2]:.3f})")
 
@@ -154,9 +151,10 @@ def calibrate_session(session_name, wrist_dir=None, det_dir=None):
     calib = {
         "session": session_name,
         "r3d_to_sim": {
-            "obj_centroid_r3d": obj_centroid_r3d.tolist(),
             "obj_centroid_sim": obj_centroid_sim.tolist(),
+            "grasp_centroid": grasp_centroid.tolist(),
             "scale": float(scale),
+            "anchor": "grasp_centroid",
         },
         "objects_sim": objs_sim.tolist(),
         "wrist_sim": wrist_sim.tolist(),
