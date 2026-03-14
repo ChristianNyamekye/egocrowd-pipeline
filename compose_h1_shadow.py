@@ -10,9 +10,7 @@ import mujoco
 import numpy as np
 from pathlib import Path
 
-MENAGERIE = Path(r"C:\Users\chris\clawd\mujoco_menagerie")
-H1_DIR = MENAGERIE / "unitree_h1"
-SHADOW_DIR = MENAGERIE / "shadow_hand"
+from pipeline_config import H1_DIR, SHADOW_DIR
 
 BLOCK_HALF = 0.04
 RENDER_W, RENDER_H = 640, 480

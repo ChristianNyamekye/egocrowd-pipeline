@@ -18,10 +18,7 @@ import json, sys, tempfile, subprocess, shutil, os
 from pathlib import Path
 from PIL import Image
 
-MENAGERIE = Path(r"C:\Users\chris\clawd\mujoco_menagerie\unitree_g1")
-CALIB_DIR = Path(r"C:\Users\chris\clawd\pipeline\wrist_trajectories")
-OUT_DIR = Path(r"C:\Users\chris\clawd\pipeline\sim_renders")
-OUT_DIR.mkdir(exist_ok=True)
+from pipeline_config import G1_DIR as MENAGERIE, CALIB_DIR, OUT_DIR
 
 BLOCK_HALF = 0.03  # 6cm cubes (easier for hand to wrap around)
 G1_TABLE_HEIGHT = 0.78  # raised: G1 arm can't reach low tables; keep near pelvis height for demo
@@ -703,7 +700,9 @@ def render_task(task_name: str):
     os.unlink(tmp.name)
 
     out = OUT_DIR / f"{task_name}_g1_v10.mp4"
-    ff = shutil.which("ffmpeg") or r"C:\Users\chris\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe"
+    ff = shutil.which("ffmpeg")
+    if not ff:
+        raise RuntimeError("ffmpeg not found in PATH")
     subprocess.check_call([ff, "-y", "-framerate", str(FPS), "-i", str(fd/"frame_%04d.png"),
                            "-vcodec", "libx264", "-pix_fmt", "yuv420p", "-crf", "23", "-preset", "fast", str(out)])
     print("OK", out)

@@ -9,14 +9,10 @@
 Data-driven: wrist trajectory from HaMeR, object positions from GroundingDINO,
 grasp timing from HaMeR detection.
 """
-import json, mujoco, numpy as np, subprocess, sys
+import json, mujoco, numpy as np, subprocess, sys, shutil
 from pathlib import Path
 
-MENAGERIE = Path(__file__).resolve().parent.parent / "mujoco_menagerie" / "franka_emika_panda"
-FFMPEG = r"C:\Users\chris\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe"
-RENDERS = Path(__file__).resolve().parent / "sim_renders"
-RENDERS.mkdir(exist_ok=True)
-CALIB_DIR = Path(__file__).resolve().parent / "wrist_trajectories"
+from pipeline_config import FRANKA_DIR as MENAGERIE, CALIB_DIR, OUT_DIR as RENDERS, FFMPEG
 
 
 def build_scene(objects_sim, task):
@@ -482,8 +478,11 @@ def simulate(session, task):
     out = RENDERS / f"{session}_franka_v9.mp4"
     print(f"  Encoding {len(frames)} frames...")
     h, w = frames[0].shape[:2]
+    ff = FFMPEG or shutil.which("ffmpeg")
+    if not ff:
+        raise RuntimeError("ffmpeg not found in PATH")
     proc = subprocess.Popen(
-        [FFMPEG, "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
+        [ff, "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
          "-s", f"{w}x{h}", "-r", "30", "-i", "pipe:",
          "-c:v", "libx264", "-preset", "fast", "-crf", "23",
          "-pix_fmt", "yuv420p", str(out)],

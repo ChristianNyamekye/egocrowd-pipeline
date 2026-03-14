@@ -15,9 +15,7 @@ from pathlib import Path
 from PIL import Image
 from compose_h1_shadow import build_model, find_body, BLOCK_HALF
 
-CALIB_DIR = Path(r"C:\Users\chris\clawd\pipeline\wrist_trajectories")
-OUT_DIR = Path(r"C:\Users\chris\clawd\pipeline\sim_renders")
-OUT_DIR.mkdir(exist_ok=True)
+from pipeline_config import CALIB_DIR, OUT_DIR, H1_DIR, SHADOW_DIR
 
 RENDER_W, RENDER_H = 640, 480
 FPS = 10
@@ -115,12 +113,7 @@ def render_task(task_name: str):
     # Build model with adhesion actuators via MjSpec
     from compose_h1_shadow import build_model as _bm, find_body as _fb
     import mujoco as mj
-    from pathlib import Path as P
-    
-    MENAGERIE = P(r"C:\Users\chris\clawd\mujoco_menagerie")
-    H1_DIR = MENAGERIE / "unitree_h1"
-    SHADOW_DIR = MENAGERIE / "shadow_hand"
-    
+
     h1 = mj.MjSpec.from_file(str(H1_DIR / "h1.xml"))
     shadow = mj.MjSpec.from_file(str(SHADOW_DIR / "right_hand.xml"))
     
@@ -505,7 +498,9 @@ def render_task(task_name: str):
     renderer.close()
     
     out = OUT_DIR / f"{task_name}_h1_shadow.mp4"
-    ff = shutil.which("ffmpeg") or r"C:\Users\chris\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe"
+    ff = shutil.which("ffmpeg")
+    if not ff:
+        raise RuntimeError("ffmpeg not found in PATH")
     subprocess.check_call([ff, "-y", "-framerate", str(FPS), "-i", str(fd/"frame_%04d.png"),
                            "-vcodec", "libx264", "-pix_fmt", "yuv420p", "-crf", "23", "-preset", "fast", str(out)])
     print("OK", out)

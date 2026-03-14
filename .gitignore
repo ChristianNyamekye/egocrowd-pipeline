@@ -43,6 +43,9 @@ wrist_trajectories/
 __pycache__/
 *.pyc
 .env
+.venv/
+*.egg-info/
+dist/
 
 # OS
 .DS_Store
