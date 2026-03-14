@@ -10,6 +10,71 @@ import numpy as np
 from pathlib import Path
 
 
+def clean_grasping_signal(grasping, min_run=5):
+    """Post-process raw grasping array: debounce + clear pre-onset noise.
+
+    1. Debounce: require min_run consecutive True frames (0.5s at 10fps).
+       Short bursts shorter than min_run become False.
+    2. Find sustained onset: first run of min_run+ consecutive True frames.
+    3. Clear pre-onset: set all frames before that onset to False.
+
+    Args:
+        grasping: np.array of floats (0/1) — raw grasping signal
+        min_run: minimum consecutive True frames to count as real grasp
+
+    Returns:
+        np.array of floats (0/1) — cleaned grasping signal
+    """
+    cleaned = grasping.copy()
+    n = len(cleaned)
+    if n == 0:
+        return cleaned
+
+    orig_count = int(np.sum(cleaned > 0))
+    orig_pct = orig_count / n * 100 if n > 0 else 0
+
+    # Step 1: Debounce — remove runs of True shorter than min_run
+    i = 0
+    while i < n:
+        if cleaned[i] > 0:
+            run_start = i
+            while i < n and cleaned[i] > 0:
+                i += 1
+            run_len = i - run_start
+            if run_len < min_run:
+                cleaned[run_start:i] = 0
+        else:
+            i += 1
+
+    # Step 2: Find sustained onset — first run of min_run+ consecutive True
+    onset_idx = None
+    i = 0
+    while i < n:
+        if cleaned[i] > 0:
+            run_start = i
+            while i < n and cleaned[i] > 0:
+                i += 1
+            if i - run_start >= min_run:
+                onset_idx = run_start
+                break
+        else:
+            i += 1
+
+    # Step 3: Clear pre-onset
+    if onset_idx is not None:
+        cleaned[:onset_idx] = 0
+    else:
+        # No sustained grasp found — clear everything
+        cleaned[:] = 0
+
+    clean_count = int(np.sum(cleaned > 0))
+    clean_pct = clean_count / n * 100 if n > 0 else 0
+    onset_str = str(onset_idx) if onset_idx is not None else "none"
+    print(f"  GRASP CLEAN: {orig_count}/{n} ({orig_pct:.0f}%) -> {clean_count}/{n} ({clean_pct:.0f}%), onset frame={onset_str}")
+
+    return cleaned
+
+
 def _find_approach_start(grasping, action_start, approach_pad=30, gap_tolerance=10):
     """Walk backwards from action_start to find where grasping begins, then pad.
 
@@ -52,6 +117,7 @@ def detect_action_window(wrist_sim, grasping, fps=10):
     """
     wrist_sim = np.array(wrist_sim, dtype=float)
     grasping = np.array(grasping, dtype=float)
+    grasping = clean_grasping_signal(grasping)
     n = len(wrist_sim)
 
     if n == 0:
@@ -183,6 +249,12 @@ def trim_calibrated_data(calib_path, start=None, end=None, fps=10):
     wrist_sim = calib["wrist_sim"]
     grasping = calib["grasping"]
     original_frames = len(wrist_sim)
+
+    # Clean grasping signal before detection/slicing
+    grasping_arr = np.array(grasping, dtype=float)
+    grasping_arr = clean_grasping_signal(grasping_arr)
+    grasping = grasping_arr.tolist()
+    calib["grasping"] = grasping
 
     # Auto-detect window if not specified
     if start is None or end is None:
