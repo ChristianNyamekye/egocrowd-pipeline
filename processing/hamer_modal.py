@@ -161,15 +161,17 @@ def _try_load_hamer():
         # Monkey-patch numpy to restore deprecated aliases removed in 1.24+
         # (chumpy tries `from numpy import bool, int, float, complex, object,
         #  unicode, str` which fails with numpy >= 1.24)
-        # Use numpy scalar types (not Python builtins) to avoid dtype confusion.
+        # Use Python builtins for str/unicode (np.str_ is a numpy string dtype
+        # that PyTorch can't handle). Use numpy scalar types for numeric types
+        # so they work as array dtypes in chumpy.
         import numpy as np
         np.bool = np.bool_
         np.int = np.int_
         np.float = np.float64
         np.complex = np.complex128
         np.object = np.object_
-        np.str = np.str_
-        np.unicode = np.str_
+        np.str = str
+        np.unicode = str
 
         import hamer.configs
         # Override CACHE_DIR_HAMER so HaMeR finds checkpoints at /root/_DATA
@@ -220,7 +222,7 @@ def _estimate_grasping_from_box(box, score):
     return bool(aspect > 0.7 and area < 40000 and score > 0.15)
 
 
-def _crop_hand(image, box, target_size=(256, 192)):
+def _crop_hand(image, box, target_size=(256, 256)):
     """Crop hand region from PIL image and resize for HaMeR input."""
     import numpy as np
     from PIL import Image as PILImage
@@ -342,7 +344,7 @@ def run_hamer_inference(frame_bytes_list: list[bytes], batch_size: int = 16,
                 crop_tensor = normalize(crop_tensor).unsqueeze(0).cuda()
 
                 with torch.no_grad():
-                    out = hamer_model(crop_tensor)
+                    out = hamer_model({'img': crop_tensor})
 
                 if "pred_keypoints_3d" in out:
                     kp3d = out["pred_keypoints_3d"][0].cpu().numpy()
