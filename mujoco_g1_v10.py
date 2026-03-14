@@ -278,7 +278,16 @@ def render_task(task_name: str):
         supp_qa = obj_qadr[supp_idx]
         supp_da = model.jnt_dofadr[obj_jids[supp_idx]]
 
-    pick_xy0 = desired_pick_xy.copy()
+    # Read actual settled block positions for IK targets (not hardcoded desired positions)
+    pick_bid = obj_body_ids[obj_names.index(pick_nm)]
+    pick_xy0 = data.xpos[pick_bid][:2].copy()
+
+    if support_nm is not None:
+        support_bid = obj_body_ids[obj_names.index(support_nm)]
+        support_settled_pos = data.xpos[support_bid][:3].copy()
+        place_xy0 = support_settled_pos[:2].copy()
+    else:
+        place_xy0 = pick_xy0 + np.array([0.12, -0.08])
 
     # Trajectory heights
     z_grasp = G1_TABLE_HEIGHT + BLOCK_HALF - 0.005
@@ -302,32 +311,34 @@ def render_task(task_name: str):
     grasp_start_pos = None   # block position at grasp time (for smooth blend)
     grasp_quat = None        # block orientation at grasp time
     grasp_age = 0            # frames since grasp started
-    # Post-release: pin placed block at stack position for settle frames
+    # Post-release: brief settle at actual position (prevents bounce, then clears)
     placed_jnt_adr = None
     placed_dof_adr = None
     placed_pos = None
     placed_countdown = 0
-    SETTLE_FRAMES = 15
+    SETTLE_FRAMES = 50  # pin through hand retreat to prevent finger-block collision bounce
 
     print(f"\nTrajectory: {n} frames, grip [{ls},{le}], pick={pick_nm}, support={support_nm}")
 
     for i in range(n):
         p = 0.0 if (i < ls) else (1.0 if i > le else (i-ls)/win)
 
-        # Place target — palm target z accounts for grasp offset so block
-        # center lands at the correct stack height
-        palm_z_offset = 0.02  # block hangs ~2cm below palm center
+        # Place target — use actual block positions from sim
+        palm_z_offset = -grasp_offset[2] if grasp_offset is not None else 0.02
         if support_nm is not None:
-            place_xy = desired_support_xy
+            place_xy = place_xy0
             block_stack_z = G1_TABLE_HEIGHT + 3 * BLOCK_HALF + 0.002
-            place_z = block_stack_z + palm_z_offset  # palm target, block will be lower
+            place_z = block_stack_z + palm_z_offset
         else:
-            place_xy = pick_xy0 + np.array([0.12, -0.08])
+            place_xy = place_xy0
             place_z = G1_TABLE_HEIGHT + BLOCK_HALF + palm_z_offset
 
         # Compute IK target and grip intent
         if i < ls:
-            target = np.array([pick_xy0[0], pick_xy0[1], z_hover])
+            # Use real wrist trajectory for natural pre-grasp arm motion
+            wrist_pos = wrist[i]
+            target = np.array([wrist_pos[0], wrist_pos[1],
+                               max(wrist_pos[2], G1_TABLE_HEIGHT + 0.15)])
             want_grip = False
         elif i > le:
             target = np.array([place_xy[0], place_xy[1], z_hover])
@@ -407,33 +418,28 @@ def render_task(task_name: str):
                 grasped_jnt_adr = model.jnt_qposadr[jnt_id]
                 block_pos = data.xpos[grasped_bid].copy()
                 grasp_offset = block_pos - pc
-                grasp_offset[2] = -0.02  # block center hangs slightly below palm
                 grasp_start_pos = block_pos.copy()
                 grasp_quat = data.qpos[grasped_jnt_adr+3:grasped_jnt_adr+7].copy()
                 grasp_age = 0
                 print(f"  F{i:03d} GRASP: {best_name} (dist={best_dist:.3f})")
 
-        # RELEASE: when grip ends — place block at exact stack position first
+        # RELEASE: brief settle at actual XY + correct stack Z (no teleport)
         if not want_grip and grasped_obj is not None:
-            # Set block to exact stack position before releasing
+            jnt_idx = obj_jids[obj_names.index(grasped_obj)]
+            dof_adr = model.jnt_dofadr[jnt_idx]
+            data.qvel[dof_adr:dof_adr + 6] = 0
+            # Pin at actual XY (where hand carried it) + correct stack Z
             if support_nm is not None:
-                block_stack_z = G1_TABLE_HEIGHT + 3 * BLOCK_HALF + 0.002
-                data.qpos[grasped_jnt_adr] = desired_support_xy[0]
-                data.qpos[grasped_jnt_adr + 1] = desired_support_xy[1]
-                data.qpos[grasped_jnt_adr + 2] = block_stack_z
-                data.qpos[grasped_jnt_adr + 3:grasped_jnt_adr + 7] = [1, 0, 0, 0]
-                jnt_idx = obj_jids[obj_names.index(grasped_obj)]
-                dof_adr = model.jnt_dofadr[jnt_idx]
-                data.qvel[dof_adr:dof_adr + 6] = 0
-            print(f"  F{i:03d} RELEASE: {grasped_obj} at z={data.qpos[grasped_jnt_adr+2]:.3f}")
-            # Start post-release settle pinning
-            if support_nm is not None:
+                stack_z = support_settled_pos[2] + 2 * BLOCK_HALF
                 placed_jnt_adr = grasped_jnt_adr
-                jnt_idx = obj_jids[obj_names.index(grasped_obj)]
-                placed_dof_adr = model.jnt_dofadr[jnt_idx]
-                placed_pos = np.array([desired_support_xy[0], desired_support_xy[1],
-                                       G1_TABLE_HEIGHT + 3 * BLOCK_HALF + 0.002])
+                placed_dof_adr = dof_adr
+                placed_pos = np.array([
+                    data.qpos[grasped_jnt_adr],      # actual X from carry
+                    data.qpos[grasped_jnt_adr + 1],   # actual Y from carry
+                    stack_z                             # exact contact stack Z
+                ])
                 placed_countdown = SETTLE_FRAMES
+            print(f"  F{i:03d} RELEASE: {grasped_obj} at z={data.qpos[grasped_jnt_adr+2]:.3f}")
             grasped_obj = None
             grasped_bid = None
             grasped_jnt_adr = None
@@ -459,16 +465,14 @@ def render_task(task_name: str):
             for da in arm_da:
                 data.qvel[da] = 0
 
-            # Pin support block at its resting position (stationary target)
+            # Pin support block at its settled position
             if support_nm is not None:
-                data.qpos[supp_qa] = desired_support_xy[0]
-                data.qpos[supp_qa + 1] = desired_support_xy[1]
-                data.qpos[supp_qa + 2] = G1_TABLE_HEIGHT + BLOCK_HALF
+                data.qpos[supp_qa:supp_qa + 3] = support_settled_pos
                 data.qpos[supp_qa + 3:supp_qa + 7] = [1, 0, 0, 0]
                 data.qvel[supp_da:supp_da + 6] = 0
 
-            # Post-release: pin placed block at stack position permanently
-            if placed_jnt_adr is not None:
+            # Post-release: brief settle pin (clears after SETTLE_FRAMES)
+            if placed_jnt_adr is not None and placed_countdown > 0:
                 data.qpos[placed_jnt_adr:placed_jnt_adr+3] = placed_pos
                 data.qpos[placed_jnt_adr+3:placed_jnt_adr+7] = [1, 0, 0, 0]
                 data.qvel[placed_dof_adr:placed_dof_adr+6] = 0
@@ -495,9 +499,13 @@ def render_task(task_name: str):
             data.ctrl[HAND_CTRL_START:HAND_CTRL_START+7] = finger_ctrl
             mujoco.mj_step(model, data)
 
-        # Decrement post-release settle countdown
+        # Decrement settle countdown; clear state when done
         if placed_countdown > 0:
             placed_countdown -= 1
+            if placed_countdown == 0:
+                placed_jnt_adr = None
+                placed_dof_adr = None
+                placed_pos = None
 
         renderer.update_scene(data, camera="front")
         Image.fromarray(renderer.render()).save(fd / f"frame_{i:04d}.png")

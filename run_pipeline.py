@@ -108,6 +108,17 @@ def run_r3d_pipeline(r3d_path, robot, task, session_name=None, objects_manual=No
     trajectory = _run_hand_tracking(video_path, session_name, session_dir, traj_path)
     log_stage(2, total, "Hand tracking", "done")
 
+    # Prepare retarget data + copy R3D (prerequisites for object detection and wrist reconstruction)
+    _build_retarget_data(session_name, session_dir, trajectory)
+
+    from pipeline_config import RAW_CAPTURES
+    raw_session_dir = RAW_CAPTURES / session_name
+    raw_session_dir.mkdir(parents=True, exist_ok=True)
+    r3d_link = raw_session_dir / r3d_path.name
+    if not r3d_link.exists():
+        import shutil
+        shutil.copy2(str(r3d_path), str(r3d_link))
+
     # Stage 3: Object detection
     log_stage(3, total, "Object detection -> objects JSON")
     OBJECT_DET_DIR.mkdir(parents=True, exist_ok=True)
@@ -125,17 +136,7 @@ def run_r3d_pipeline(r3d_path, robot, task, session_name=None, objects_manual=No
     # Stage 4: 3D wrist reconstruction
     log_stage(4, total, "3D wrist reconstruction -> wrist3d JSON")
 
-    _build_retarget_data(session_name, session_dir, trajectory)
-
     from reconstruct_wrist_3d import process_session
-    from pipeline_config import RAW_CAPTURES
-    raw_session_dir = RAW_CAPTURES / session_name
-    raw_session_dir.mkdir(parents=True, exist_ok=True)
-    r3d_link = raw_session_dir / r3d_path.name
-    if not r3d_link.exists():
-        import shutil
-        shutil.copy2(str(r3d_path), str(r3d_link))
-
     wrist_result = process_session(session_name)
 
     if wrist_result:
