@@ -139,10 +139,18 @@ def _try_load_hamer():
             if mod_name not in sys.modules:
                 sys.modules[mod_name] = types.ModuleType(mod_name)
 
+        # Create a no-op renderer class that can be instantiated + called
+        # without error (HAMER.__init__ does self.renderer = SkeletonRenderer(cfg))
+        class _NoOpRenderer:
+            def __init__(self, *args, **kwargs):
+                pass
+            def __call__(self, *args, **kwargs):
+                return None
+
         renderer_stubs = {
-            "hamer.utils.renderer": {"Renderer": None},
-            "hamer.utils.mesh_renderer": {"MeshRenderer": None},
-            "hamer.utils.skeleton_renderer": {"SkeletonRenderer": None},
+            "hamer.utils.renderer": {"Renderer": _NoOpRenderer},
+            "hamer.utils.mesh_renderer": {"MeshRenderer": _NoOpRenderer},
+            "hamer.utils.skeleton_renderer": {"SkeletonRenderer": _NoOpRenderer},
         }
         for mod_path, attrs in renderer_stubs.items():
             stub = types.ModuleType(mod_path)
