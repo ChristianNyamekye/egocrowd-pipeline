@@ -42,6 +42,7 @@ FINGER_PRESHAPE = np.array([0.2, -0.25, -0.3, 0.4, 0.45, 0.4, 0.45])  # 50% of C
 # Distance-based pre-shaping thresholds (OUT-03)
 PRESHAPE_DIST_START = 0.20   # begin finger curl at 20cm from nearest block
 PRESHAPE_DIST_FULL  = 0.06   # full pre-shape at 6cm (approximately block diameter)
+SIM_GRIP_PROXIMITY  = 0.05   # 5cm — only close fingers when palm is this close to a block
 
 FINGER_GAIN_MULTIPLIER = 40.0
 
@@ -477,6 +478,15 @@ def render_task(task_name: str):
         if ik_err > 0.02:  # 2cm convergence threshold
             ik_failures.append((i, float(ik_err)))
 
+        # Sim-side proximity gate: only close fingers when palm is near a block (OUT-04)
+        min_block_dist_grip = float('inf')  # default for logging
+        if want_grip:
+            min_block_dist_grip = min(
+                np.linalg.norm(data.xpos[bid] - pc) for bid in obj_body_ids
+            )
+            if min_block_dist_grip > SIM_GRIP_PROXIMITY:
+                want_grip = False
+
         # Finger control with distance-based pre-shaping (OUT-03)
         if want_grip:
             # Full closure for contact grasp — fast close to grip before block slips
@@ -532,6 +542,9 @@ def render_task(task_name: str):
             print(f"F{i:03d} grip={want_grip} palm={pc.round(3)} "
                   f"dists={{{', '.join(f'{k}:{v:.3f}' for k,v in block_dists.items())}}} "
                   f"block_z={{{', '.join(f'{k}:{v:.3f}' for k,v in block_zs.items())}}}")
+            grip_gated = bool(grasping[i] > 0) and not want_grip
+            if grip_gated:
+                print(f"  ^ grip GATED by proximity (dist={min_block_dist_grip:.3f}m > {SIM_GRIP_PROXIMITY}m)")
 
     # === RET-01: Compute RMS tracking error ===
     palm_arr = np.array(palm_positions)
