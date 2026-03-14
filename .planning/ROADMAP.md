@@ -50,11 +50,17 @@ Replaced `p`-choreography with `target = wrist[i]` for all frames. Grasp intent 
 
 Two parallel workstreams:
 
-**3a — HaMeR Integration (TRK-04, TRK-05)**
+**3a — HaMeR Integration (TRK-04, TRK-05)** --- CODE COMPLETE (Plan 01, 2026-03-14)
 Deploy HaMeR on Modal A10G GPU. Use HaMeR's direct 3D wrist output to bypass depth-map unprojection.
+- Plan 01 code complete: processing/hamer_modal.py (combined GroundingDINO + HaMeR Modal function), egocrowd/hand_pose.py (Modal remote call), run_pipeline.py (wrist_3d_camera passthrough + --hamer/--no-hamer), reconstruct_wrist_3d.py (cam_to_world + HaMeR 3D path).
+- Deployment testing deferred: requires Modal auth + MANO model files.
+- TRK-04 (>85% detection) and TRK-05 (skip depth unprojection) pending deployment validation.
 
-**3b — Grasp Visual Quality (OUT-03, OUT-04, OUT-05)**
+**3b — Grasp Visual Quality (OUT-03, OUT-04, OUT-05)** --- CODE COMPLETE (Plan 02, 2026-03-14)
 Distance-based finger pre-shaping during approach, contype/conaffinity collision exclusion during kinematic hold.
+- Plan 02 code complete: FINGER_PRESHAPE constant + distance thresholds, distance-based pre-shaping with quadratic ease-in, collision exclusion during kinematic hold (contype/conaffinity toggle).
+- OUT-03 (finger pre-shaping) and OUT-04 (no interpenetration) implemented.
+- OUT-05 (STACKED=True) pending simulation verification.
 
 **Success Criteria:**
 1. HaMeR achieves >85% hand detection rate on the test recording (vs. MediaPipe's 52%)
