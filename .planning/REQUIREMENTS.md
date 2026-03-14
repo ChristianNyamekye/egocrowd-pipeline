@@ -57,26 +57,26 @@ Requirements for True Retargeting & Quality milestone. Each maps to roadmap phas
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TRK-01 | — | Pending |
-| TRK-02 | — | Pending |
-| TRK-03 | — | Pending |
-| RET-01 | — | Pending |
-| RET-02 | — | Pending |
-| RET-03 | — | Pending |
-| RET-04 | — | Pending |
-| OUT-01 | — | Pending |
-| OUT-02 | — | Pending |
-| TRK-04 | — | Pending |
-| TRK-05 | — | Pending |
-| OUT-03 | — | Pending |
-| OUT-04 | — | Pending |
-| OUT-05 | — | Pending |
+| TRK-01 | 1 | Pending |
+| TRK-02 | 1 | Pending |
+| TRK-03 | 1 | Pending |
+| OUT-01 | 1 | Pending |
+| OUT-02 | 1 | Pending |
+| RET-01 | 2 | Pending |
+| RET-02 | 2 | Pending |
+| RET-03 | 2 | Pending |
+| RET-04 | 2 | Pending |
+| TRK-04 | 3 | Pending |
+| TRK-05 | 3 | Pending |
+| OUT-03 | 3 | Pending |
+| OUT-04 | 3 | Pending |
+| OUT-05 | 3 | Pending |
 
 **Coverage:**
 - v0.3 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14/14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-14*
-*Last updated: 2026-03-14 after initial definition*
+*Last updated: 2026-03-14 after roadmap creation*
