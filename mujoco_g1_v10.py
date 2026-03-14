@@ -38,6 +38,11 @@ SEED = np.array([0.0, 0.0, 0.0, 2.4, 0.0, -1.5, 0.0])
 HAND_CTRL_START = 36
 FINGER_OPEN = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 FINGER_CLOSED = np.array([0.4, -0.5, -0.6, 0.8, 0.9, 0.8, 0.9])  # partial closure — wrap around block, not through it
+FINGER_PRESHAPE = np.array([0.2, -0.25, -0.3, 0.4, 0.45, 0.4, 0.45])  # 50% of CLOSED — anticipatory curl
+
+# Distance-based pre-shaping thresholds (OUT-03)
+PRESHAPE_DIST_START = 0.20   # begin finger curl at 20cm from nearest block
+PRESHAPE_DIST_FULL  = 0.06   # full pre-shape at 6cm (approximately block diameter)
 
 FINGER_GAIN_MULTIPLIER = 25.0
 BLEND_FRAMES = 12  # smooth blend from rest to hand-tracking
@@ -388,6 +393,11 @@ def render_task(task_name: str):
                 grasp_quat = data.qpos[grasped_jnt_adr+3:grasped_jnt_adr+7].copy()
                 grasp_age = 0
                 print(f"  F{i:03d} GRASP: {best_name} (dist={best_dist:.3f})")
+                # Disable grasped block collision during kinematic hold (OUT-04)
+                for gi in block_geom_ids:
+                    if model.geom_bodyid[gi] == grasped_bid:
+                        model.geom_contype[gi] = 0
+                        model.geom_conaffinity[gi] = 0
 
         # RELEASE: brief settle at actual XY + correct stack Z (no teleport)
         if not want_grip and grasped_obj is not None:
@@ -405,6 +415,12 @@ def render_task(task_name: str):
                     stack_z                             # exact contact stack Z
                 ])
                 placed_countdown = SETTLE_FRAMES
+            # Restore block collision on release (OUT-04)
+            for gi in block_geom_ids:
+                if model.geom_bodyid[gi] == grasped_bid:
+                    model.geom_contype[gi] = 1
+                    model.geom_conaffinity[gi] = 1
+
             print(f"  F{i:03d} RELEASE: {grasped_obj} at z={data.qpos[grasped_jnt_adr+2]:.3f}")
             grasped_obj = None
             grasped_bid = None
@@ -418,9 +434,28 @@ def render_task(task_name: str):
         if grasped_obj is not None:
             grasp_age += 1
 
-        # Finger control
-        target_ctrl = FINGER_CLOSED if want_grip else FINGER_OPEN
-        finger_ctrl += (target_ctrl - finger_ctrl) * 0.25
+        # Finger control with distance-based pre-shaping (OUT-03)
+        if want_grip:
+            # Full closure for data-driven grasp
+            finger_target = FINGER_CLOSED
+            blend_rate = 0.25
+        else:
+            # Distance-based pre-shaping: curl fingers as palm approaches block
+            min_block_dist = min(
+                np.linalg.norm(data.xpos[bid] - pc) for bid in obj_body_ids
+            )
+            preshape_t = np.clip(
+                1.0 - (min_block_dist - PRESHAPE_DIST_FULL) / (PRESHAPE_DIST_START - PRESHAPE_DIST_FULL),
+                0.0, 1.0
+            )
+            preshape_t = preshape_t * preshape_t  # quadratic ease-in
+            if preshape_t > 0.01:
+                finger_target = FINGER_OPEN + (FINGER_PRESHAPE - FINGER_OPEN) * preshape_t
+                blend_rate = 0.15  # slower blend for anticipatory shaping
+            else:
+                finger_target = FINGER_OPEN
+                blend_rate = 0.20
+        finger_ctrl += (finger_target - finger_ctrl) * blend_rate
         data.ctrl[HAND_CTRL_START:HAND_CTRL_START+7] = finger_ctrl
 
         # Simulate substeps
