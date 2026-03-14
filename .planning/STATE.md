@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: verifying
-last_updated: "2026-03-14T05:43:01.657Z"
-last_activity: 2026-03-14 — Phase 3 Plan 02 code complete (OUT-03, OUT-04)
+last_updated: "2026-03-14T06:43:00Z"
+last_activity: 2026-03-14 — Quick task 001 complete (vault-capture.sh + CLAUDE.md)
 progress:
   total_phases: 3
   completed_phases: 3
@@ -17,7 +17,11 @@ progress:
 Phase: 3 — Quality Uplift
 Plan: 02 — Grasp Visual Quality (CODE COMPLETE, verification pending)
 Status: Finger pre-shaping + collision exclusion implemented. Needs `python mujoco_g1_v10.py stack2` to verify STACKED=True (OUT-05).
-Last activity: 2026-03-14 — Phase 3 Plan 02 code complete (OUT-03, OUT-04)
+Last activity: 2026-03-14 — Quick task 001 complete (vault-capture.sh + CLAUDE.md)
+
+## Quick Tasks
+
+- [x] QT-001: Automate session progress capture to Obsidian (vault-capture.sh)
 
 ## Project Reference
 
