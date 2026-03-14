@@ -294,12 +294,7 @@ def render_task(task_name: str):
     else:
         place_xy0 = pick_xy0 + np.array([0.12, -0.08])
 
-    # Trajectory heights
-    z_grasp = G1_TABLE_HEIGHT + BLOCK_HALF - 0.005
-    z_hover = z_grasp + 0.12
-    z_lift = z_grasp + 0.18
-
-    renderer = mujoco.Renderer(model, RENDER_H, RENDER_W)
+renderer = mujoco.Renderer(model, RENDER_H, RENDER_W)
     fd = OUT_DIR / f"_{task_name}_g1v10_frames"
     if fd.exists():
         shutil.rmtree(fd)
@@ -331,73 +326,18 @@ def render_task(task_name: str):
     print(f"\nTrajectory: {n} frames, grip [{ls},{le}], pick={pick_nm}, support={support_nm}")
 
     for i in range(n):
-        p = 0.0 if (i < ls) else (1.0 if i > le else (i-ls)/win)
+        # === RET-01: Follow real wrist trajectory for ALL frames ===
+        target = wrist[i].copy()
+        target[2] = max(target[2], G1_TABLE_HEIGHT + 0.02)  # Z floor: 2cm above table
 
-        # Place target — use actual block positions from sim
-        palm_z_offset = -grasp_offset[2] if grasp_offset is not None else 0.02
-        if support_nm is not None:
-            place_xy = place_xy0
-            block_stack_z = G1_TABLE_HEIGHT + 3 * BLOCK_HALF + 0.002
-            place_z = block_stack_z + palm_z_offset
-        else:
-            place_xy = place_xy0
-            place_z = G1_TABLE_HEIGHT + BLOCK_HALF + palm_z_offset
+        # === RET-03: Clamp to reachable workspace envelope ===
+        target_pre_clamp = target.copy()
+        target = np.clip(target, WORKSPACE_MIN, WORKSPACE_MAX)
+        if not np.allclose(target, target_pre_clamp, atol=1e-6):
+            n_clamped += 1
 
-        # Compute IK target and grip intent
-        if i < ls:
-            # Use real wrist trajectory for natural pre-grasp arm motion
-            wrist_pos = wrist[i]
-            target = np.array([wrist_pos[0], wrist_pos[1],
-                               max(wrist_pos[2], G1_TABLE_HEIGHT + 0.15)])
-            want_grip = False
-        elif i > le:
-            target = np.array([place_xy[0], place_xy[1], z_hover])
-            want_grip = False
-        else:
-            if p < 0.12:
-                target = np.array([pick_xy0[0], pick_xy0[1], z_hover])
-                want_grip = False
-            elif p < 0.25:
-                t = smoothstep((p-0.12)/0.13)
-                target = np.array([pick_xy0[0], pick_xy0[1], z_hover + (z_grasp - z_hover)*t])
-                want_grip = t > 0.5
-            elif p < 0.42:
-                # Dwell at grasp height — fingers closing, attachment triggers
-                target = np.array([pick_xy0[0], pick_xy0[1], z_grasp])
-                want_grip = True
-            elif p < 0.55:
-                t = smoothstep((p-0.42)/0.13)
-                target = np.array([pick_xy0[0], pick_xy0[1], z_grasp + (z_lift - z_grasp)*t])
-                want_grip = True
-            elif p < 0.75:
-                t = smoothstep((p-0.55)/0.20)
-                mid_xy = (pick_xy0 + place_xy) / 2 + np.array([0.0, -0.08])
-                if t < 0.5:
-                    t2 = t * 2
-                    cx = pick_xy0[0] + (mid_xy[0]-pick_xy0[0])*t2
-                    cy = pick_xy0[1] + (mid_xy[1]-pick_xy0[1])*t2
-                else:
-                    t2 = (t-0.5)*2
-                    cx = mid_xy[0] + (place_xy[0]-mid_xy[0])*t2
-                    cy = mid_xy[1] + (place_xy[1]-mid_xy[1])*t2
-                target = np.array([cx, cy, z_lift])
-                want_grip = True
-            elif p < 0.88:
-                t = smoothstep((p-0.75)/0.13)
-                target = np.array([place_xy[0], place_xy[1], z_lift + (place_z-z_lift)*t])
-                want_grip = True
-            elif p < 0.92:
-                # Hold at stack position — block settles onto support
-                target = np.array([place_xy[0], place_xy[1], place_z])
-                want_grip = True
-            elif p < 0.95:
-                # Release and retreat slightly up
-                target = np.array([place_xy[0], place_xy[1], place_z + 0.04])
-                want_grip = False
-            else:
-                t = smoothstep((p-0.95)/0.05)
-                target = np.array([place_xy[0], place_xy[1], place_z + 0.04 + (z_hover-place_z)*t])
-                want_grip = False
+        # === RET-02: Grasp intent from tracking data ===
+        want_grip = bool(grasping[i] > 0)
 
         # IK solve
         for qa, v in zip(arm_qa, last_arm_q):
