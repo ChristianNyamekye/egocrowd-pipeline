@@ -10,6 +10,31 @@ import numpy as np
 from pathlib import Path
 
 
+def _find_approach_start(grasping, action_start, approach_pad=30, gap_tolerance=10):
+    """Walk backwards from action_start to find where grasping begins, then pad.
+
+    Skips small non-grasping gaps (< gap_tolerance frames) to handle
+    fragmented grasping signals (common with HaMeR detection).
+    """
+    onset = action_start
+    while onset > 0:
+        if grasping[onset - 1] > 0:
+            onset -= 1
+        else:
+            # Check if this is a small gap we should skip
+            gap_start = onset - 1
+            while gap_start > 0 and grasping[gap_start - 1] == 0:
+                gap_start -= 1
+            gap_size = onset - gap_start
+            if gap_size < gap_tolerance and gap_start > 0:
+                # Small gap -- skip it and keep walking
+                onset = gap_start
+            else:
+                # Large gap -- this is the true grasping onset boundary
+                break
+    return max(0, onset - approach_pad)
+
+
 def detect_action_window(wrist_sim, grasping, fps=10):
     """Detect the action window using grasping signal + wrist velocity.
 
@@ -72,7 +97,11 @@ def detect_action_window(wrist_sim, grasping, fps=10):
     margin_before = 30   # 3 seconds at 10fps
     margin_after = 50    # 5 seconds at 10fps
 
-    start = max(0, int(action_frames[0]) - margin_before)
+    first_action = int(action_frames[0])
+    if grasping[first_action] > 0:
+        start = _find_approach_start(grasping, first_action, approach_pad=margin_before)
+    else:
+        start = max(0, first_action - margin_before)
     end = min(n, int(action_frames[-1]) + margin_after)
 
     # Enforce 15-30 second duration (150-300 frames at 10fps)
@@ -122,8 +151,11 @@ def detect_action_window(wrist_sim, grasping, fps=10):
             window_end_frame = focus_start + target_max - margin_before - margin_after
             focus_end_idx = np.searchsorted(action_frames, window_end_frame, side='right') - 1
             focus_end = int(action_frames[focus_end_idx])
-            start = max(0, focus_start - margin_before)
+            start = _find_approach_start(grasping, focus_start, approach_pad=30)
             end = min(n, focus_end + margin_after)
+            # If window exceeds target_max, truncate the END to preserve approach phase
+            if (end - start) > target_max:
+                end = start + target_max
 
     return int(start), int(end)
 
