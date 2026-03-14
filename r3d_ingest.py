@@ -65,21 +65,28 @@ def extract_rgb_frames(z: zipfile.ZipFile, meta: Dict, output_dir: str) -> List[
 
 
 def extract_depth_maps(z: zipfile.ZipFile, meta: Dict, output_dir: str) -> List[str]:
-    """Extract depth maps. R3D stores them as raw float arrays."""
+    """Extract depth maps. R3D stores them as LZ-FSE compressed float32 arrays."""
     depth_dir = os.path.join(output_dir, "depth")
     os.makedirs(depth_dir, exist_ok=True)
-    
+
     dw = meta.get("dw", 192)
     dh = meta.get("dh", 256)
-    
+
     num_frames = len(meta.get("frameTimestamps", []))
     paths = []
-    
+
     for i in range(num_frames):
         depth_name = f"rgbd/{i}.depth"
         if depth_name in z.namelist():
             raw = z.read(depth_name)
-            # R3D depth is stored as float32 array
+            # R3D depth is LZ-FSE compressed — decompress first
+            try:
+                import liblzfse
+                raw = liblzfse.decompress(raw)
+            except ImportError:
+                pass  # liblzfse not installed, try raw
+            except Exception:
+                pass  # fallback if already uncompressed
             try:
                 depth = np.frombuffer(raw, dtype=np.float32).reshape(dh, dw)
             except ValueError:

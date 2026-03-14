@@ -1,155 +1,104 @@
 # Flexa Pipeline
 
-**Phone capture → robot training data.** Record a task with your iPhone, get a LeRobot/RLDS-compatible dataset out.
+**Phone capture -> robot training data.** Record a task with your iPhone, get a LeRobot/RLDS-compatible dataset out.
+
+## Quick Start
+
+```bash
+# Install
+pip install mujoco numpy pillow opencv-python liblzfse
+# For GPU stages (HaMeR, GroundingDINO):
+pip install torch torchvision transformers
+
+# Synthetic mode (no hardware needed):
+python run_pipeline.py --synthetic --robot g1 --task stack
+
+# Real R3D file:
+python run_pipeline.py --r3d path/to/recording.r3d --robot g1 --task stack
+
+# With manual object positions (skip GPU detection):
+python run_pipeline.py --r3d recording.r3d --robot g1 --task stack \
+    --objects '[[0.5, 0.0, 0.43], [0.35, 0.1, 0.43]]'
+```
 
 ## Architecture
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  1. CAPTURE  │────▶│  2. INGEST   │────▶│ 3. RETARGET  │────▶│  4. EXPORT   │────▶│  5. SIM/VIZ  │
-│  iPhone R3D  │     │ Extract + Det│     │ Human→Robot  │     │ LeRobot/RLDS │     │  MuJoCo Val  │
-└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+                    run_pipeline.py (canonical entry point)
+                            |
+    +-----------+-----------+-----------+-----------+
+    |           |           |           |           |
+ 1.INGEST   2.HANDS     3.OBJECTS   4.WRIST3D   5.CALIBRATE -> 6.SIMULATE
+ r3d_ingest  HaMeR/MP   GDino/     reconstruct  calibrate      mujoco_*
+             hand_tracker detect_obj  _wrist_3d   _workspace
 ```
 
-### Stage 1: Capture (`r3d_ingest.py`)
+### Stage 1: Ingest (`r3d_ingest.py`)
 - Input: `.r3d` file from Record3D app (iPhone LiDAR)
-- Extracts: RGB frames, depth maps, camera intrinsics, confidence maps
-- Output: `r3d_output/<session>/` with frames + metadata
+- Extracts: RGB frames, LZ-FSE compressed depth maps, camera intrinsics
+- Output: `r3d_output/<session>/` with frames + depth + metadata
 
-### Stage 2: Hand Tracking + Object Detection
-- **Hand tracking** (`hand_tracker_v2.py` or `modal_hamer.py`):
-  - Runs HaMeR (Hand Mesh Recovery) on extracted frames
-  - Produces 3D hand mesh + wrist position per frame
-  - Can run locally or on Modal (GPU cloud) via `run_modal_pipeline.py`
-- **Object detection** (`detect_objects.py`):
-  - Runs GroundingDINO for object bounding boxes
-  - Detects task-relevant objects (blocks, mugs, etc.)
-  - Output: `object_detections/<session>.json`
+### Stage 2: Hand Tracking
+- **HaMeR** (GPU, via Modal): 3D hand mesh recovery — preferred
+- **MediaPipe** (CPU): fallback when no GPU available
+- Output: wrist pixel positions + grasp state per frame
 
-### Stage 3: Spatial Calibration + Retargeting
-- **3D reconstruction** (`reconstruct_wrist_3d.py`):
-  - Projects 2D hand detections into 3D using depth + camera intrinsics
-  - Output: `wrist_trajectories/<task>_wrist3d.json`
-- **Workspace calibration** (`calibrate_workspace.py`):
-  - Aligns phone coordinate frame → robot workspace
-  - Maps detected object positions to sim-space
-  - Output: `wrist_trajectories/<task>_calibrated.json`
-- **Robot retargeting** (`validate_and_retarget.py`):
-  - Maps human wrist trajectory → robot joint positions via IK
-  - Handles grasp detection (open/close from hand mesh)
-  - Currently targets: Franka Panda (7-DOF arm + parallel gripper)
+### Stage 3: Object Detection
+- **GroundingDINO** (GPU): zero-shot object detection with depth-based 3D positioning
+- Requires `--objects` flag if GPU detection is unavailable
+- Output: `object_detections/<session>_objects_clean.json`
 
-### Stage 4: Dataset Export
-- **LeRobot format** (`egodex_to_lerobot.py`):
-  - Exports to LeRobot-compatible HDF5 + JSON metadata
-  - Fields: `qpos_arm[7]`, `qvel_arm[7]`, `ee_pos[3]`, `gripper_state[1]`, `target_qpos[7]`, `target_gripper[1]`
-  - Output: `lerobot_dataset_v5/`
-- **RLDS/Open X-Embodiment format** (`egodex_to_oxe.py`):
-  - Exports to TFRecord format compatible with RT-X ecosystem
+### Stage 4-5: 3D Reconstruction + Calibration
+- Projects 2D hand detections into 3D using depth + camera intrinsics
+- Aligns phone coordinate frame to robot workspace
+- Output: `wrist_trajectories/<session>_calibrated.json`
 
-### Stage 5: Simulation Validation (MuJoCo)
-- **Franka sim** (`mujoco_franka_v9.py`): Replays retargeted trajectory on Franka arm — this one works cleanly
-- **G1 humanoid sim** (`mujoco_g1_v10.py`): Replays on Unitree G1 — WIP, adhesion-based grasping
-- **H1 + Shadow Hand** (`mujoco_h1_shadow_v1.py`): H1 body + dexterous hand — WIP
+### Stage 6: Simulation (MuJoCo)
+- **G1 humanoid** (`mujoco_g1_v10.py`): Kinematic arm + smooth-blend block attachment
+- **Franka Panda** (`mujoco_franka_v9.py`): Same kinematic pattern, parallel gripper
+- **H1 + Shadow Hand** (`mujoco_h1_shadow_v1.py`): WIP
 - Uses [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie) robot models
-
-## Quick Start
-
-### Prerequisites
-```bash
-pip install mujoco numpy pillow opencv-python
-pip install record3d  # for R3D file parsing
-# For GPU stages (HaMeR):
-pip install torch torchvision
-# For object detection:
-pip install groundingdino-py
-```
-
-### Run the pipeline end-to-end
-
-```bash
-# 1. Ingest R3D file
-python r3d_ingest.py path/to/recording.r3d
-
-# 2. Run hand tracking (local or cloud)
-python hand_tracker_v2.py r3d_output/<session>/
-# OR for cloud GPU:
-python run_modal_pipeline.py <session>
-
-# 3. Detect objects
-python detect_objects.py r3d_output/<session>/
-
-# 4. Reconstruct 3D wrist trajectory
-python reconstruct_wrist_3d.py <session> --task stack2
-
-# 5. Calibrate to robot workspace
-python calibrate_workspace.py wrist_trajectories/stack2_wrist3d.json
-
-# 6. Export to LeRobot format
-python egodex_to_lerobot.py
-
-# 7. Validate in simulation (optional)
-python mujoco_franka_v9.py stack2
-```
-
-### View the R3D capture
-Open `r3d_viewer/index.html` in a browser, or visit: https://r3dviewer.vercel.app
+- Output: `sim_renders/<session>_<robot>.mp4`
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `r3d_ingest.py` | Parse .r3d → frames + depth + intrinsics |
-| `hand_tracker_v2.py` | HaMeR hand mesh recovery (local) |
-| `modal_hamer.py` | HaMeR on Modal cloud GPU |
+| `run_pipeline.py` | End-to-end pipeline entry point |
+| `r3d_ingest.py` | Parse .r3d -> frames + depth + intrinsics |
+| `hand_tracker_v2.py` | MediaPipe hand tracking (CPU) |
+| `egocrowd/hand_pose.py` | HaMeR hand mesh recovery (GPU) |
 | `detect_objects.py` | GroundingDINO object detection |
-| `reconstruct_wrist_3d.py` | 2D→3D wrist trajectory via depth |
-| `calibrate_workspace.py` | Phone→robot coordinate alignment |
-| `validate_and_retarget.py` | Human→robot IK retargeting |
-| `egodex_to_lerobot.py` | Export LeRobot HDF5 dataset |
-| `egodex_to_oxe.py` | Export RLDS/OXE TFRecord dataset |
-| `mujoco_franka_v9.py` | Franka sim validation (working) |
-| `mujoco_g1_v10.py` | G1 humanoid sim (WIP) |
-| `schema/episode.py` | Data schema definitions |
+| `reconstruct_wrist_3d.py` | 2D->3D wrist trajectory via depth |
+| `calibrate_workspace.py` | Phone->robot coordinate alignment |
+| `synthetic_data.py` | Generate test trajectories |
+| `mujoco_g1_v10.py` | G1 humanoid simulation |
+| `mujoco_franka_v9.py` | Franka Panda simulation |
+| `pipeline_config.py` | Centralized path configuration |
 
 ## Data Flow
 
 ```
 iPhone (.r3d)
-  ├── RGB frames (30fps, 1920x1440)
-  ├── Depth maps (LiDAR, 256x192)
-  └── Camera intrinsics + poses
-        │
-        ▼
-  HaMeR → 3D hand mesh per frame
-  GroundingDINO → object bounding boxes
-        │
-        ▼
-  Depth reprojection → wrist XYZ trajectory
-  Workspace calibration → sim-space coordinates
-        │
-        ▼
-  IK retargeting → robot joint angles
-  Grasp detection → gripper open/close
-        │
-        ▼
-  LeRobot HDF5 dataset
-  ├── observations: qpos[7], ee_pos[3], gripper[1]
-  ├── actions: target_qpos[7], target_gripper[1]
-  └── metadata: task, fps, episode phases
+  +-- RGB frames (30fps, 1920x1440)
+  +-- Depth maps (LiDAR, 256x192, LZ-FSE compressed)
+  +-- Camera intrinsics + poses
+        |
+        v
+  HaMeR/MediaPipe -> wrist position per frame
+  GroundingDINO -> object 3D positions
+        |
+        v
+  Depth reprojection -> wrist XYZ trajectory
+  Workspace calibration -> sim-space coordinates
+        |
+        v
+  MuJoCo simulation -> robot replays manipulation task
+  LeRobot HDF5 export -> training data
 ```
 
 ## Status
 
-- ✅ R3D ingest + frame extraction
-- ✅ HaMeR hand tracking (local + cloud)
-- ✅ Object detection (GroundingDINO)
-- ✅ 3D wrist trajectory reconstruction
-- ✅ Workspace calibration
-- ✅ Franka IK retargeting
-- ✅ LeRobot dataset export
-- ✅ Franka MuJoCo sim replay (clean)
-- 🔧 G1 humanoid sim (grasping needs work — adhesion-based, not physically realistic yet)
-- 🔧 H1 + Shadow Hand sim (WIP)
-- 📋 Multi-episode batch processing
-- 📋 Automated quality validation
+- Working: R3D ingest, hand tracking, GroundingDINO detection, 3D reconstruction, calibration
+- Working: Franka sim (clean kinematic attach), G1 sim (kinematic attach)
+- WIP: H1 + Shadow Hand sim, multi-episode batch processing

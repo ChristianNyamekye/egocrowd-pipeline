@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "egocrowd"
-version = "0.1.0"
-description = "Crowdsourced egocentric manipulation data pipeline for robot learning"
+name = "flexa-pipeline"
+version = "0.2.0"
+description = "Phone capture to robot training data pipeline"
 readme = "README.md"
 license = {text = "CC-BY-4.0"}
 requires-python = ">=3.10"
@@ -42,19 +42,15 @@ sim = [
     "matplotlib",
 ]
 all = [
-    "egocrowd[gpu]",
-    "egocrowd[sim]",
+    "flexa-pipeline[gpu]",
+    "flexa-pipeline[sim]",
 ]
 
 [project.scripts]
-egocrowd = "egocrowd.cli:main"
+flexa = "egocrowd.cli:main"
 
 [project.urls]
-Homepage = "https://egocrowd.vercel.app"
-Repository = "https://github.com/ChristianNyamekye/egocrowd-pipeline"
-Paper = "https://arxiv.org/abs/TODO"
-Dataset = "https://huggingface.co/datasets/egocrowd/pick-mug-v5"
-
+Repository = "https://github.com/ChristianNyamekye/flexa-pipeline"
 
 [tool.setuptools.packages.find]
 include = ["egocrowd*"]

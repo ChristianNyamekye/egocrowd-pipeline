@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Flexa Pipeline: End-to-end R3D → robot simulation.
+"""Flexa Pipeline: End-to-end R3D -> robot simulation.
 
 Processes iPhone LiDAR recordings (.r3d) through all stages and produces
 a robot simulation video. Supports synthetic data mode for testing.
@@ -31,11 +31,11 @@ def log_stage(stage_num, total, name, status="starting"):
         print(f"{prefix} {name}")
         print(f"{'='*60}")
     elif status == "done":
-        print(f"{prefix} {name} — done")
+        print(f"{prefix} {name} -- done")
     elif status == "skip":
-        print(f"{prefix} {name} — skipped")
+        print(f"{prefix} {name} -- skipped")
     elif status == "fail":
-        print(f"{prefix} {name} — FAILED")
+        print(f"{prefix} {name} -- FAILED")
 
 
 def validate_file(path, label):
@@ -84,7 +84,7 @@ def run_r3d_pipeline(r3d_path, robot, task, session_name=None, objects_manual=No
     R3D_OUTPUT.mkdir(parents=True, exist_ok=True)
 
     # Stage 1: Ingest R3D
-    log_stage(1, total, "Ingest R3D → frames + depth + video")
+    log_stage(1, total, "Ingest R3D -> frames + depth + video")
     from r3d_ingest import ingest_r3d
     ingest_result = ingest_r3d(
         str(r3d_path), str(session_dir),
@@ -95,57 +95,39 @@ def run_r3d_pipeline(r3d_path, robot, task, session_name=None, objects_manual=No
     # Validate
     video_path = ingest_result.get("video_path", "")
     if not video_path or not Path(video_path).exists():
-        # Try default location
         video_path = str(session_dir / "video.mp4")
     validate_file(video_path, "Extracted video")
     n_frames = ingest_result.get("num_frames", 0)
     print(f"  Extracted {n_frames} frames, video: {video_path}")
     log_stage(1, total, "Ingest R3D", "done")
 
-    # Stage 2: Hand tracking (MediaPipe)
-    log_stage(2, total, "Hand tracking (MediaPipe) → trajectory JSON")
-    from hand_tracker_v2 import process_video
+    # Stage 2: Hand tracking
+    # Try HaMeR (GPU, via Modal) first, fall back to MediaPipe
+    log_stage(2, total, "Hand tracking -> trajectory JSON")
     traj_path = str(session_dir / f"{session_name}_hand_trajectory.json")
-    trajectory = process_video(video_path, traj_path)
-
-    # Validate detection rate
-    if trajectory and trajectory.get("frames"):
-        frames_with_hands = sum(1 for f in trajectory["frames"] if f.get("hands"))
-        total_frames = len(trajectory["frames"])
-        detection_rate = frames_with_hands / max(total_frames, 1)
-        print(f"  Detection rate: {detection_rate:.0%} ({frames_with_hands}/{total_frames})")
-        if detection_rate < 0.1:
-            print(f"  WARNING: Very low hand detection rate ({detection_rate:.0%})")
+    trajectory = _run_hand_tracking(video_path, session_name, session_dir, traj_path)
     log_stage(2, total, "Hand tracking", "done")
 
-    # Stage 3: Object detection (fallback)
-    log_stage(3, total, "Object detection → objects JSON")
+    # Stage 3: Object detection
+    log_stage(3, total, "Object detection -> objects JSON")
     OBJECT_DET_DIR.mkdir(parents=True, exist_ok=True)
 
     if objects_manual is not None:
-        from detect_objects_fallback import detect_objects_manual
         obj_positions = json.loads(objects_manual) if isinstance(objects_manual, str) else objects_manual
         labels = [f"block_{chr(97+i)}" for i in range(len(obj_positions))]
-        detect_objects_manual(session_name, labels, obj_positions)
+        _write_object_detections(session_name, labels, obj_positions)
         print(f"  Manual object positions: {len(obj_positions)} objects")
     else:
-        # Try to infer from depth maps (simple heuristic)
-        print("  No manual positions provided — using default object placement")
-        from detect_objects_fallback import detect_objects_manual
-        # Default positions: two blocks on the table
-        default_positions = [[0.0, 0.0, 0.5], [0.1, -0.05, 0.5]]
-        labels = ["block_a", "block_b"]
-        detect_objects_manual(session_name, labels, default_positions)
+        # Use GroundingDINO for detection (requires GPU or transformers)
+        _run_object_detection(session_name, r3d_path, trajectory)
     log_stage(3, total, "Object detection", "done")
 
     # Stage 4: 3D wrist reconstruction
-    log_stage(4, total, "3D wrist reconstruction → wrist3d JSON")
+    log_stage(4, total, "3D wrist reconstruction -> wrist3d JSON")
 
-    # Build retarget-compatible data from hand trajectory
     _build_retarget_data(session_name, session_dir, trajectory)
 
     from reconstruct_wrist_3d import process_session
-    # Ensure raw_captures has a symlink/copy of the R3D for reconstruct_wrist_3d
     from pipeline_config import RAW_CAPTURES
     raw_session_dir = RAW_CAPTURES / session_name
     raw_session_dir.mkdir(parents=True, exist_ok=True)
@@ -156,7 +138,6 @@ def run_r3d_pipeline(r3d_path, robot, task, session_name=None, objects_manual=No
 
     wrist_result = process_session(session_name)
 
-    # Validate
     if wrist_result:
         n_valid = wrist_result.get("n_valid", 0)
         n_total = wrist_result.get("n_frames", 1)
@@ -169,7 +150,7 @@ def run_r3d_pipeline(r3d_path, robot, task, session_name=None, objects_manual=No
     log_stage(4, total, "3D wrist reconstruction", "done")
 
     # Stage 5: Workspace calibration
-    log_stage(5, total, "Workspace calibration → calibrated JSON")
+    log_stage(5, total, "Workspace calibration -> calibrated JSON")
     from calibrate_workspace import calibrate_session
     calib_path = calibrate_session(session_name)
 
@@ -180,11 +161,135 @@ def run_r3d_pipeline(r3d_path, robot, task, session_name=None, objects_manual=No
     log_stage(5, total, "Workspace calibration", "done")
 
     # Stage 6: Simulation
-    log_stage(6, total, f"Run {robot} simulation → video")
+    log_stage(6, total, f"Run {robot} simulation -> video")
     video_path = run_simulation(robot, session_name, task)
     log_stage(6, total, f"Run {robot} simulation", "done")
 
     return video_path
+
+
+def _run_hand_tracking(video_path, session_name, session_dir, traj_path):
+    """Run hand tracking: try HaMeR via Modal, fall back to MediaPipe."""
+    trajectory = None
+
+    # Try HaMeR (GPU) first
+    try:
+        from egocrowd.hand_pose import extract_hand_poses
+        frames_dir = str(session_dir / "frames")
+        result = extract_hand_poses(frames_dir)
+        # Convert HaMeR output to trajectory format
+        if result:
+            trajectory = _hamer_to_trajectory(result, video_path)
+            print("  Hand tracking: HaMeR (GPU)")
+    except (ImportError, NotImplementedError, Exception) as e:
+        print(f"  HaMeR unavailable ({type(e).__name__}), using MediaPipe")
+
+    # Fall back to MediaPipe
+    if trajectory is None:
+        from hand_tracker_v2 import process_video
+        trajectory = process_video(video_path, traj_path)
+        print("  Hand tracking: MediaPipe (CPU)")
+
+    if trajectory and trajectory.get("frames"):
+        frames_with_hands = sum(1 for f in trajectory["frames"] if f.get("hands"))
+        total_frames = len(trajectory["frames"])
+        detection_rate = frames_with_hands / max(total_frames, 1)
+        print(f"  Detection rate: {detection_rate:.0%} ({frames_with_hands}/{total_frames})")
+        if detection_rate < 0.1:
+            print(f"  WARNING: Very low hand detection rate ({detection_rate:.0%})")
+
+    return trajectory
+
+
+def _hamer_to_trajectory(hamer_result, video_path):
+    """Convert HaMeR output to the trajectory dict format used downstream."""
+    # HaMeR returns per-frame MANO params with wrist positions and grasping
+    # Map to the same format as hand_tracker_v2 output
+    import cv2
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+
+    trajectory = {
+        "metadata": {
+            "source": "hamer",
+            "video": str(Path(video_path).name),
+            "fps": fps,
+            "resolution": [w, h],
+            "total_frames": total,
+        },
+        "frames": [],
+    }
+
+    timesteps = hamer_result.get("timesteps", [])
+    for i, ts in enumerate(timesteps):
+        frame_data = {
+            "frame": i,
+            "timestamp": round(i / fps, 4),
+            "hands": [],
+        }
+        if ts.get("wrist_pixel"):
+            hand_data = {
+                "hand": "right",
+                "confidence": 0.9,
+                "wrist": {
+                    "position": {"x": ts["wrist_pixel"][0], "y": ts["wrist_pixel"][1], "z": 0},
+                },
+                "grasping": ts.get("grasping", False),
+            }
+            frame_data["hands"].append(hand_data)
+        trajectory["frames"].append(frame_data)
+
+    return trajectory
+
+
+def _run_object_detection(session_name, r3d_path, trajectory):
+    """Run GroundingDINO object detection. Errors out if unavailable."""
+    try:
+        from detect_objects import process_session
+        result = process_session(session_name)
+        if result and result.get("detections"):
+            # Convert GroundingDINO output to the format calibrate_workspace expects
+            detections = result["detections"]
+            labels = [d.get("label", f"object_{i}") for i, d in enumerate(detections)]
+            positions = [d["pos_world"] for d in detections if d.get("pos_world")]
+            if positions:
+                _write_object_detections(session_name, labels[:len(positions)], positions)
+                print(f"  GroundingDINO detected {len(positions)} objects with 3D positions")
+                return
+            else:
+                print("  WARNING: GroundingDINO detected objects but no 3D positions (depth missing?)")
+        else:
+            print("  WARNING: GroundingDINO returned no detections")
+    except ImportError as e:
+        print(f"  GroundingDINO unavailable: {e}")
+    except Exception as e:
+        print(f"  GroundingDINO failed: {e}")
+
+    print("  ERROR: Object detection failed. Provide positions manually with --objects", file=sys.stderr)
+    print("  Example: --objects '[[0.5, 0.0, 0.43], [0.35, 0.1, 0.43]]'", file=sys.stderr)
+    sys.exit(1)
+
+
+def _write_object_detections(session_name, labels, positions):
+    """Write object detections to JSON in the format downstream stages expect."""
+    OBJECT_DET_DIR.mkdir(parents=True, exist_ok=True)
+    detections = []
+    for label, pos in zip(labels, positions):
+        detections.append({
+            "label": label,
+            "pos_world": pos,
+            "confidence": 1.0,
+            "source": "manual",
+        })
+    result = {"detections": detections}
+    out_path = OBJECT_DET_DIR / f"{session_name}_objects_clean.json"
+    with open(out_path, "w") as f:
+        json.dump(result, f, indent=2)
+    print(f"  Saved {len(result['detections'])} detections to {out_path}")
 
 
 def _build_retarget_data(session_name, session_dir, trajectory):
@@ -240,7 +345,7 @@ def run_simulation(robot, session_name, task):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Flexa Pipeline: R3D → robot simulation",
+        description="Flexa Pipeline: R3D -> robot simulation",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -270,7 +375,7 @@ Examples:
         pipeline_config.OUT_DIR = Path(args.output)
         pipeline_config.OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    print(f"Flexa Pipeline — robot={args.robot}, task={args.task}")
+    print(f"Flexa Pipeline -- robot={args.robot}, task={args.task}")
     print(f"{'='*60}")
     t0 = time.time()
 

@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""G1 v10: Block separation fix + dwell+press phase.
+"""G1 v10: Kinematic block attachment (Franka v9 pattern).
 
-Changes from v9b:
-- Support block moved 28cm to the side (was 17cm diagonal - too close, arm contacted support)
-- Support placed at desired_pick_xy + [0.0, -0.28] (purely lateral, avoids carry arc)
-- Dwell+press phase: at p=0.25-0.32, press down to z_grasp-0.012 before holding
-  (ensures pad contact with block before adhesion kicks in)
-- Per-block contact tracking to confirm correct block is grabbed
-- Architecture unchanged from v9b: enlarged colliders + adhesion, no welds/teleporting
+Rewritten to use the same kinematic-attach approach as mujoco_franka_v9.py:
+- Arm joints set kinematically via IK
+- Block grasping uses smooth-blend kinematic attachment (no adhesion)
+- Fingers close visually during grip
+- No block pinning, no adhesion actuators, no contact pads
 
-Output: pipeline/sim_renders/stack2_g1_v10.mp4
+Output: sim_renders/<task>_g1_v10.mp4
 """
 
 import mujoco
@@ -20,8 +18,8 @@ from PIL import Image
 
 from pipeline_config import G1_DIR as MENAGERIE, CALIB_DIR, OUT_DIR
 
-BLOCK_HALF = 0.03  # 6cm cubes (easier for hand to wrap around)
-G1_TABLE_HEIGHT = 0.78  # raised: G1 arm can't reach low tables; keep near pelvis height for demo
+BLOCK_HALF = 0.03  # 6cm cubes
+G1_TABLE_HEIGHT = 0.78
 RENDER_W, RENDER_H = 640, 480
 FPS = 10
 TIMESTEP = 0.002
@@ -41,31 +39,11 @@ HAND_CTRL_START = 36
 FINGER_OPEN = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 FINGER_CLOSED = np.array([0.8, -1.2, -1.5, 1.5, 1.6, 1.5, 1.6])
 
-HAND_COLLIDER_SCALE = 1.5  # v10: reduced from 3.5 - 3.5x was too large, shoved pick block away during descent
-HAND_FRICTION = np.array([5.0, 0.05, 0.001])
 FINGER_GAIN_MULTIPLIER = 25.0
-
-# Bodies to attach adhesion actuators to
-ADHESION_BODIES = [
-    # Wrist bodies: ABOVE block center when palm at z_grasp - adhesion pulls block UP ✓
-    "right_wrist_yaw_link",
-    "right_wrist_pitch_link",
-    "right_wrist_roll_link",
-    # Finger bodies: at/below block center - used for mechanical contact + side adhesion
-    "right_hand_thumb_2_link",
-    "right_hand_middle_1_link",
-    "right_hand_index_1_link",
-]
-ADHESION_GAIN = 8.0   # v10: reduced from 80 - 80N on 50g block = 1600 m/s², block overshoots arm
+BLEND_FRAMES = 12  # smooth blend from rest to hand-tracking
 
 
 def scene_xml(obj_xml: str) -> str:
-    # Build adhesion actuators for hand bodies
-    adhesion_xml = "\n".join(
-        f'    <adhesion body="{b}" ctrlrange="0 1" gain="{ADHESION_GAIN}"/>'
-        for b in ADHESION_BODIES
-    )
-
     return f"""<mujoco>
   <include file="g1_with_hands.xml"/>
   <option timestep="{TIMESTEP}" gravity="0 0 -9.81" cone="elliptic" impratio="10"/>
@@ -93,10 +71,6 @@ def scene_xml(obj_xml: str) -> str:
 
     <camera name="front" pos="1.4 0.9 1.1" xyaxes="-0.55 0.84 0.0 -0.20 -0.13 0.97" fovy="50"/>
   </worldbody>
-
-  <actuator>
-{adhesion_xml}
-  </actuator>
 </mujoco>"""
 
 
@@ -154,44 +128,6 @@ def build_objects(obj_names):
     return "\n    ".join(parts)
 
 
-def enlarge_hand_colliders(model):
-    """Scale up all right hand collision geoms and increase friction."""
-    hand_geom_ids = set()
-    # Replace mesh collision geoms with scaled capsule primitives
-    # Mesh geoms (type=7) don't respond to size scaling - their collision
-    # shape comes from mesh vertices. We must change to primitive type.
-    for gi in range(model.ngeom):
-        bid = model.geom_bodyid[gi]
-        bname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, bid)
-        if bname and "right_hand" in bname:
-            if model.geom_contype[gi] > 0 or model.geom_conaffinity[gi] > 0:
-                # Convert mesh geoms to capsules, scale box geoms
-                if model.geom_type[gi] == mujoco.mjtGeom.mjGEOM_MESH:
-                    # Replace mesh with a capsule approximation
-                    model.geom_type[gi] = mujoco.mjtGeom.mjGEOM_CAPSULE
-                    # Capsule size: [radius, half-length, 0]
-                    # Use the mesh bounding box to estimate
-                    bbox = model.geom_size[gi].copy()
-                    radius = max(bbox[0], bbox[1]) * HAND_COLLIDER_SCALE
-                    half_len = bbox[2] * HAND_COLLIDER_SCALE
-                    model.geom_size[gi] = np.array([radius, half_len, 0.0])
-                elif model.geom_type[gi] == mujoco.mjtGeom.mjGEOM_BOX:
-                    model.geom_size[gi] *= HAND_COLLIDER_SCALE
-                else:
-                    model.geom_size[gi] *= HAND_COLLIDER_SCALE
-                model.geom_friction[gi] = HAND_FRICTION
-                hand_geom_ids.add(gi)
-                print(f"    geom {gi} on {bname}: type={model.geom_type[gi]} size={model.geom_size[gi].round(4)}")
-
-    # Increase finger actuator gains (only the original finger actuators, not adhesion)
-    for ai in range(min(model.nu, HAND_CTRL_START + 7)):
-        if ai >= HAND_CTRL_START:
-            model.actuator_gainprm[ai, 0] *= FINGER_GAIN_MULTIPLIER
-            model.actuator_biasprm[ai, 1] *= FINGER_GAIN_MULTIPLIER
-
-    return hand_geom_ids
-
-
 def smoothstep(t):
     t = np.clip(t, 0.0, 1.0)
     return t * t * (3 - 2 * t)
@@ -214,88 +150,14 @@ def render_task(task_name: str):
     tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False, dir=str(MENAGERIE))
     tmp.write(xml); tmp.close()
 
-    # Use MjSpec to add contact pad geoms to finger bodies
-    spec = mujoco.MjSpec.from_file(tmp.name)
-
-    def find_body_spec(root, name):
-        for b in root.bodies:
-            if b.name == name:
-                return b
-            found = find_body_spec(b, name)
-            if found:
-                return found
-        return None
-
-    # Add modest sphere contact pads to fingertip bodies (physics-friendly contact)
-    # Keep these small to avoid impulsive launches.
-    pad_config = {
-        "right_hand_thumb_2_link": 0.028,
-        "right_hand_thumb_1_link": 0.022,
-        "right_hand_middle_0_link": 0.022,
-        "right_hand_middle_1_link": 0.028,
-        "right_hand_index_0_link": 0.022,
-        "right_hand_index_1_link": 0.028,
-    }
-
-    for bname, radius in pad_config.items():
-        body = find_body_spec(spec.worldbody, bname)
-        if body:
-            g = body.add_geom()
-            g.name = f"pad_{bname.replace('right_hand_', '')}"
-            g.type = mujoco.mjtGeom.mjGEOM_SPHERE
-            g.size = np.array([radius, 0.0, 0.0])
-            g.contype = 1
-            g.conaffinity = 1
-            g.friction = np.array([5.0, 0.05, 0.001])
-            g.mass = 0.001
-            g.rgba = np.array([0.8, 0.8, 0.2, 0.3])  # semi-transparent yellow
-            print(f"  Added contact pad to {bname}: sphere r={radius}")
-
-    model = spec.compile()
+    model = mujoco.MjModel.from_xml_path(tmp.name)
     data = mujoco.MjData(model)
-
-    print("Setting up hand colliders...")
-    # Collect hand geom ids (including the new pads)
-    hand_geom_ids = set()
-    for gi in range(model.ngeom):
-        bid = model.geom_bodyid[gi]
-        bname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, bid)
-        if bname and ("right_hand" in bname or "right_wrist" in bname):
-            if model.geom_contype[gi] > 0 or model.geom_conaffinity[gi] > 0:
-                gname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, gi) or f"geom{gi}"
-                print(f"    hand geom {gi}: {gname} on {bname} type={model.geom_type[gi]} size={model.geom_size[gi].round(4)}")
-                hand_geom_ids.add(gi)
 
     # Increase finger actuator gains
     for ai in range(min(model.nu, HAND_CTRL_START + 7)):
         if ai >= HAND_CTRL_START:
             model.actuator_gainprm[ai, 0] *= FINGER_GAIN_MULTIPLIER
             model.actuator_biasprm[ai, 1] *= FINGER_GAIN_MULTIPLIER
-
-    print(f"  {len(hand_geom_ids)} hand geoms (including pads)")
-
-    # Find adhesion actuator indices
-    adhesion_act_ids = []
-    for b in ADHESION_BODIES:
-        for ai in range(model.nu):
-            aname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_ACTUATOR, ai)
-            # Adhesion actuators are named after the body
-            if aname and aname == b:
-                adhesion_act_ids.append(ai)
-                break
-        else:
-            # Try matching by body transmission
-            pass
-
-    # If names don't match, find by index (adhesion actuators are after the original ones)
-    if not adhesion_act_ids:
-        # Original G1 has some actuators, our adhesion ones come after
-        # Let's find them by checking actuator transmission type
-        for ai in range(model.nu):
-            if model.actuator_trntype[ai] == mujoco.mjtTrn.mjTRN_BODY:
-                adhesion_act_ids.append(ai)
-
-    print(f"  Found {len(adhesion_act_ids)} adhesion actuators at indices: {adhesion_act_ids}")
 
     key_id = jid(model, "stand", mujoco.mjtObj.mjOBJ_KEY)
     mujoco.mj_resetDataKeyframe(model, data, key_id)
@@ -308,10 +170,34 @@ def render_task(task_name: str):
 
     obj_jids = [jid(model, f"{nm}_jnt", mujoco.mjtObj.mjOBJ_JOINT) for nm in obj_names]
     obj_qadr = [model.jnt_qposadr[j] for j in obj_jids]
+    obj_body_ids = [jid(model, nm, mujoco.mjtObj.mjOBJ_BODY) for nm in obj_names]
+
+    # Workspace correction: place blocks in reachable workspace
+    table_x_offset = 0.32 - 0.5
+    desired_pick_xy = np.array([0.38, -0.03])
+    desired_support_xy = desired_pick_xy + np.array([0.0, -0.28])
+
+    # Determine pick vs support
+    n = len(wrist)
+    grip_idx = np.where(grasping > 0)[0]
+    late = grip_idx[grip_idx >= int(0.6*n)]
+    if len(late) < 3:
+        late = grip_idx[-max(1, len(grip_idx)//2):] if len(grip_idx) else np.array([n-10])
+    ls, le = int(late[0]), int(min(late[-1]+5, n-1))
+    win = max(1, le-ls)
+
+    avg_xy = wrist[ls:le, :2].mean(axis=0)
+    pick_nm = min(obj_names, key=lambda nm: np.linalg.norm(obj_xy[nm] - avg_xy))
+    support_nm = [x for x in obj_names if x != pick_nm][0] if len(obj_names) >= 2 else None
+
+    # Update positions to desired workspace
+    obj_xy[pick_nm] = desired_pick_xy - np.array([table_x_offset, 0.0])
+    if support_nm is not None:
+        obj_xy[support_nm] = desired_support_xy - np.array([table_x_offset, 0.0])
 
     for nm, qa in zip(obj_names, obj_qadr):
         xy = obj_xy[nm]
-        data.qpos[qa:qa+3] = [xy[0] + 0.32 - 0.5, xy[1], G1_TABLE_HEIGHT + BLOCK_HALF + 0.01]
+        data.qpos[qa:qa+3] = [xy[0] + table_x_offset, xy[1], G1_TABLE_HEIGHT + BLOCK_HALF + 0.01]
         data.qpos[qa+3:qa+7] = [1, 0, 0, 0]
 
     for qa, v in zip(arm_qa, SEED):
@@ -353,7 +239,7 @@ def render_task(task_name: str):
         for da, cnt in freeze_v_slices:
             data.qvel[da:da+cnt] = 0
 
-    # 2-phase settle
+    # 2-phase settle: first settle robot without blocks, then add blocks
     block_saved = {}
     for gi in block_geom_ids:
         block_saved[gi] = (int(model.geom_contype[gi]), int(model.geom_conaffinity[gi]))
@@ -370,7 +256,7 @@ def render_task(task_name: str):
 
     for nm, qa in zip(obj_names, obj_qadr):
         xy = obj_xy[nm]
-        data.qpos[qa:qa+3] = [xy[0] + 0.32 - 0.5, xy[1], G1_TABLE_HEIGHT + BLOCK_HALF + 0.01]
+        data.qpos[qa:qa+3] = [xy[0] + table_x_offset, xy[1], G1_TABLE_HEIGHT + BLOCK_HALF + 0.01]
         data.qpos[qa+3:qa+7] = [1, 0, 0, 0]
         da = model.jnt_dofadr[obj_jids[obj_names.index(nm)]]
         data.qvel[da:da+6] = 0
@@ -384,92 +270,20 @@ def render_task(task_name: str):
         bz = data.qpos[qa+2]
         print(f"  {nm} settled at z={bz:.4f} (expected ~{G1_TABLE_HEIGHT + BLOCK_HALF:.3f})")
 
-    # grip window
-    n = len(wrist)
-    grip_idx = np.where(grasping > 0)[0]
-    late = grip_idx[grip_idx >= int(0.6*n)]
-    if len(late) < 3:
-        late = grip_idx[-max(1, len(grip_idx)//2):] if len(grip_idx) else np.array([n-10])
-    ls, le = int(late[0]), int(min(late[-1]+5, n-1))
-    win = max(1, le-ls)
+    print(f"  Workspace: pick={pick_nm} at {desired_pick_xy.round(3)}, support={support_nm} at {desired_support_xy.round(3)}")
 
-    avg_xy = wrist[ls:le, :2].mean(axis=0)
-    # Spread blocks apart for cleaner grasp (min 12cm between centers)
-    if len(obj_names) >= 2:
-        xy_a = obj_xy[obj_names[0]]
-        xy_b = obj_xy[obj_names[1]]
-        dist = np.linalg.norm(xy_a - xy_b)
-        if dist < 0.12:
-            center = (xy_a + xy_b) / 2
-            direction = (xy_b - xy_a) / (dist + 1e-8)
-            obj_xy[obj_names[0]] = center - direction * 0.06
-            obj_xy[obj_names[1]] = center + direction * 0.06
-            # Re-place objects with new positions
-            for nm, qa in zip(obj_names, obj_qadr):
-                xy = obj_xy[nm]
-                data.qpos[qa] = xy[0] + 0.32 - 0.5
-                data.qpos[qa+1] = xy[1]
-            mujoco.mj_forward(model, data)
-            print(f"  Blocks spread apart: {obj_names[0]}={obj_xy[obj_names[0]].round(4)}, {obj_names[1]}={obj_xy[obj_names[1]].round(4)}, dist={0.12:.3f}")
-
-    pick_nm = min(obj_names, key=lambda nm: np.linalg.norm(obj_xy[nm] - avg_xy))
-    support_nm = [x for x in obj_names if x != pick_nm][0] if len(obj_names) >= 2 else None
-
-    # Workspace correction: place blocks explicitly in reachable workspace.
-    # This is an INITIAL SCENE PLACEMENT adjustment (no mid-run teleports).
-    table_x_offset = 0.32 - 0.5
-    desired_pick_xy = np.array([0.38, -0.03])
-    # v10: support moved 28cm lateral - out of carry arc AND wrist sweep path
-    desired_support_xy = desired_pick_xy + np.array([0.0, -0.28])
-
-    # Update obj_xy (calib frame) so that sim placement hits these desired XYs
-    obj_xy[pick_nm] = desired_pick_xy - np.array([table_x_offset, 0.0])
-    if support_nm is not None:
-        obj_xy[support_nm] = desired_support_xy - np.array([table_x_offset, 0.0])
-
-    # Re-place objects with corrected positions
-    for nm, qa in zip(obj_names, obj_qadr):
-        xy = obj_xy[nm]
-        data.qpos[qa:qa+3] = [xy[0] + table_x_offset, xy[1], G1_TABLE_HEIGHT + BLOCK_HALF + 0.01]
-        data.qpos[qa+3:qa+7] = [1, 0, 0, 0]
-        da = model.jnt_dofadr[obj_jids[obj_names.index(nm)]]
-        data.qvel[da:da+6] = 0
-    mujoco.mj_forward(model, data)
-    print(f"  Workspace placement: pick={pick_nm} pick_xy={desired_pick_xy.round(3)} support={support_nm} support_xy={desired_support_xy.round(3)}")
-
-    pick_xy0 = desired_pick_xy.copy()
-    pick_rest_z = G1_TABLE_HEIGHT + BLOCK_HALF  # exact table-resting z = 0.810
-
-    # Helper: pin pick block in place (kinematic hold during approach)
-    pick_idx = obj_names.index(pick_nm)
-    pick_qa = obj_qadr[pick_idx]
-    pick_da = model.jnt_dofadr[obj_jids[pick_idx]]
-
-    # Helper: pin support block during carry so arm doesn't knock it around
+    # Support block indices for pinning (support stays stationary)
     if support_nm is not None:
         supp_idx = obj_names.index(support_nm)
         supp_qa = obj_qadr[supp_idx]
         supp_da = model.jnt_dofadr[obj_jids[supp_idx]]
 
-    def pin_pick():
-        """XY-only kinematic pin for pick block.
-        - Pins X,Y to prevent lateral shoving by arm geoms
-        - Z is FREE: physics/adhesion can lift the block normally
-        - Releases completely when block rises above table (z > pick_rest_z + 5mm)
-        """
-        current_z = data.qpos[pick_qa + 2]
-        if current_z < pick_rest_z + 0.005:
-            # Pin X,Y only - prevent lateral shoving
-            data.qpos[pick_qa] = desired_pick_xy[0]
-            data.qpos[pick_qa + 1] = desired_pick_xy[1]
-            data.qvel[pick_da] = 0      # x velocity
-            data.qvel[pick_da + 1] = 0  # y velocity
-            # Z is free: table provides normal force, adhesion can lift
+    pick_xy0 = desired_pick_xy.copy()
 
-    z_grasp = G1_TABLE_HEIGHT + BLOCK_HALF - 0.005  # slightly below block center so fingers wrap sides
-    z_press = z_grasp - 0.012  # v10 dwell+press: 12mm downward bias during dwell
+    # Trajectory heights
+    z_grasp = G1_TABLE_HEIGHT + BLOCK_HALF - 0.005
     z_hover = z_grasp + 0.12
-    z_lift = z_grasp + 0.18   # slightly higher carry to clear support block
+    z_lift = z_grasp + 0.18
 
     renderer = mujoco.Renderer(model, RENDER_H, RENDER_W)
     fd = OUT_DIR / f"_{task_name}_g1v10_frames"
@@ -477,51 +291,45 @@ def render_task(task_name: str):
         shutil.rmtree(fd)
     fd.mkdir()
 
-    # Disable wrist collisions during pre-grip approach to prevent bumping blocks.
-    wrist_geom_saved = {}
-    for gi in range(model.ngeom):
-        bid = model.geom_bodyid[gi]
-        bname = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, bid)
-        if bname and "right_wrist" in bname:
-            wrist_geom_saved[gi] = (int(model.geom_contype[gi]), int(model.geom_conaffinity[gi]))
-
     finger_ctrl = FINGER_OPEN.copy()
     last_arm_q = SEED.copy()
-    adhesion_on = False
+
+    # --- Kinematic block attachment state (Franka v9 pattern) ---
+    grasped_obj = None       # which object name is currently grasped
+    grasped_bid = None       # body id of grasped object
+    grasped_jnt_adr = None   # qpos address of grasped object's freejoint
+    grasp_offset = None      # relative XYZ offset (block_pos - palm_pos at grasp time)
+    grasp_start_pos = None   # block position at grasp time (for smooth blend)
+    grasp_quat = None        # block orientation at grasp time
+    grasp_age = 0            # frames since grasp started
+    # Post-release: pin placed block at stack position for settle frames
+    placed_jnt_adr = None
+    placed_dof_adr = None
+    placed_pos = None
+    placed_countdown = 0
+    SETTLE_FRAMES = 15
 
     print(f"\nTrajectory: {n} frames, grip [{ls},{le}], pick={pick_nm}, support={support_nm}")
 
     for i in range(n):
         p = 0.0 if (i < ls) else (1.0 if i > le else (i-ls)/win)
 
-        # Collision gating: keep wrist non-colliding during pre-grip AND descent.
-        in_descent = (i >= ls and p < 0.25)
-        if i < ls or in_descent:
-            for gi in wrist_geom_saved:
-                model.geom_contype[gi] = 0
-                model.geom_conaffinity[gi] = 0
-        else:
-            for gi, (ct, ca) in wrist_geom_saved.items():
-                model.geom_contype[gi] = ct
-                model.geom_conaffinity[gi] = ca
-
-        # XY pin applied after target is computed (see below, just before substeps)
-
-        # v10: fixed place target — don't chase dynamic support position
-        # (arm contacts support during carry, which would create a chasing loop)
+        # Place target — palm target z accounts for grasp offset so block
+        # center lands at the correct stack height
+        palm_z_offset = 0.02  # block hangs ~2cm below palm center
         if support_nm is not None:
-            place_xy = desired_support_xy          # fixed world XY of support block
-            place_z = G1_TABLE_HEIGHT + 3 * BLOCK_HALF + 0.002  # on top of support block
+            place_xy = desired_support_xy
+            block_stack_z = G1_TABLE_HEIGHT + 3 * BLOCK_HALF + 0.002
+            place_z = block_stack_z + palm_z_offset  # palm target, block will be lower
         else:
             place_xy = pick_xy0 + np.array([0.12, -0.08])
-            place_z = G1_TABLE_HEIGHT + BLOCK_HALF
+            place_z = G1_TABLE_HEIGHT + BLOCK_HALF + palm_z_offset
 
+        # Compute IK target and grip intent
         if i < ls:
-            # Pre-grip: go straight to hover over pick (avoid sweeping through blocks)
             target = np.array([pick_xy0[0], pick_xy0[1], z_hover])
             want_grip = False
         elif i > le:
-            # Post-grip: retreat to hover over place
             target = np.array([place_xy[0], place_xy[1], z_hover])
             want_grip = False
         else:
@@ -532,14 +340,9 @@ def render_task(task_name: str):
                 t = smoothstep((p-0.12)/0.13)
                 target = np.array([pick_xy0[0], pick_xy0[1], z_hover + (z_grasp - z_hover)*t])
                 want_grip = t > 0.5
-            elif p < 0.32:
-                # v10 dwell+press: close fingers AND press down to z_press over ~10 frames
-                t = smoothstep((p - 0.25) / 0.07)
-                target = np.array([pick_xy0[0], pick_xy0[1], z_grasp + (z_press - z_grasp) * t])
-                want_grip = True
             elif p < 0.42:
-                # Hold at z_press - adhesion builds contact force
-                target = np.array([pick_xy0[0], pick_xy0[1], z_press])
+                # Dwell at grasp height — fingers closing, attachment triggers
+                target = np.array([pick_xy0[0], pick_xy0[1], z_grasp])
                 want_grip = True
             elif p < 0.55:
                 t = smoothstep((p-0.42)/0.13)
@@ -562,124 +365,155 @@ def render_task(task_name: str):
                 t = smoothstep((p-0.75)/0.13)
                 target = np.array([place_xy[0], place_xy[1], z_lift + (place_z-z_lift)*t])
                 want_grip = True
-            elif p < 0.94:
-                target = np.array([place_xy[0], place_xy[1], place_z + 0.02])
+            elif p < 0.92:
+                # Hold at stack position — block settles onto support
+                target = np.array([place_xy[0], place_xy[1], place_z])
+                want_grip = True
+            elif p < 0.95:
+                # Release and retreat slightly up
+                target = np.array([place_xy[0], place_xy[1], place_z + 0.04])
                 want_grip = False
             else:
-                t = smoothstep((p-0.94)/0.06)
-                target = np.array([place_xy[0], place_xy[1], place_z + 0.02 + (z_hover-place_z)*t])
+                t = smoothstep((p-0.95)/0.05)
+                target = np.array([place_xy[0], place_xy[1], place_z + 0.04 + (z_hover-place_z)*t])
                 want_grip = False
 
-        # v10 pick block pin:
-        # - p < 0.90: XY tracks arm IK target (carry phase)
-        # - p >= 0.88 (after release): pin block_b to exact stack position XYZ
-        #   This "settles" the block onto support after the physics carry.
-        if p < 0.88:
-            data.qpos[pick_qa] = target[0]
-            data.qpos[pick_qa + 1] = target[1]
-            data.qvel[pick_da] = 0
-            data.qvel[pick_da + 1] = 0
-        else:
-            # Settle block_b onto support block (final stack position)
-            data.qpos[pick_qa] = place_xy[0]
-            data.qpos[pick_qa + 1] = place_xy[1]
-            data.qpos[pick_qa + 2] = place_z  # exact stack height
-            data.qvel[pick_da:pick_da + 6] = 0
-
-        # v10 support block XYZ-pin: always hold support at desired resting position
-        if support_nm is not None:
-            data.qpos[supp_qa] = desired_support_xy[0]
-            data.qpos[supp_qa + 1] = desired_support_xy[1]
-            data.qpos[supp_qa + 2] = G1_TABLE_HEIGHT + BLOCK_HALF  # on table
-            data.qvel[supp_da:supp_da + 6] = 0
-
-        # IK
+        # IK solve
         for qa, v in zip(arm_qa, last_arm_q):
             data.qpos[qa] = v
         mujoco.mj_forward(model, data)
         arm_q = ik_solve(model, data, target, arm_qa, arm_da)
         last_arm_q = arm_q.copy()
 
-        # finger ctrl
+        # --- Kinematic block attachment logic (Franka v9 pattern) ---
+        pc = palm_center(model, data)
+
+        # ATTACH: when want_grip=True and palm is close enough to a block
+        if want_grip and grasped_obj is None:
+            best_dist, best_name, best_bid2 = 1e9, None, None
+            for name, bid in zip(obj_names, obj_body_ids):
+                bpos = data.xpos[bid].copy()
+                xy_dist = np.linalg.norm(bpos[:2] - pc[:2])
+                z_gap = abs(pc[2] - bpos[2])
+                if xy_dist < best_dist:
+                    best_dist = xy_dist
+                    best_name = name
+                    best_bid2 = bid
+            if best_dist < 0.08 and abs(pc[2] - data.xpos[best_bid2][2]) < 0.06:
+                grasped_obj = best_name
+                grasped_bid = best_bid2
+                jnt_name = f"{best_name}_jnt"
+                jnt_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, jnt_name)
+                grasped_jnt_adr = model.jnt_qposadr[jnt_id]
+                block_pos = data.xpos[grasped_bid].copy()
+                grasp_offset = block_pos - pc
+                grasp_offset[2] = -0.02  # block center hangs slightly below palm
+                grasp_start_pos = block_pos.copy()
+                grasp_quat = data.qpos[grasped_jnt_adr+3:grasped_jnt_adr+7].copy()
+                grasp_age = 0
+                print(f"  F{i:03d} GRASP: {best_name} (dist={best_dist:.3f})")
+
+        # RELEASE: when grip ends — place block at exact stack position first
+        if not want_grip and grasped_obj is not None:
+            # Set block to exact stack position before releasing
+            if support_nm is not None:
+                block_stack_z = G1_TABLE_HEIGHT + 3 * BLOCK_HALF + 0.002
+                data.qpos[grasped_jnt_adr] = desired_support_xy[0]
+                data.qpos[grasped_jnt_adr + 1] = desired_support_xy[1]
+                data.qpos[grasped_jnt_adr + 2] = block_stack_z
+                data.qpos[grasped_jnt_adr + 3:grasped_jnt_adr + 7] = [1, 0, 0, 0]
+                jnt_idx = obj_jids[obj_names.index(grasped_obj)]
+                dof_adr = model.jnt_dofadr[jnt_idx]
+                data.qvel[dof_adr:dof_adr + 6] = 0
+            print(f"  F{i:03d} RELEASE: {grasped_obj} at z={data.qpos[grasped_jnt_adr+2]:.3f}")
+            # Start post-release settle pinning
+            if support_nm is not None:
+                placed_jnt_adr = grasped_jnt_adr
+                jnt_idx = obj_jids[obj_names.index(grasped_obj)]
+                placed_dof_adr = model.jnt_dofadr[jnt_idx]
+                placed_pos = np.array([desired_support_xy[0], desired_support_xy[1],
+                                       G1_TABLE_HEIGHT + 3 * BLOCK_HALF + 0.002])
+                placed_countdown = SETTLE_FRAMES
+            grasped_obj = None
+            grasped_bid = None
+            grasped_jnt_adr = None
+            grasp_offset = None
+            grasp_start_pos = None
+            grasp_quat = None
+            grasp_age = 0
+
+        # Increment blend counter
+        if grasped_obj is not None:
+            grasp_age += 1
+
+        # Finger control
         target_ctrl = FINGER_CLOSED if want_grip else FINGER_OPEN
         finger_ctrl += (target_ctrl - finger_ctrl) * 0.25
         data.ctrl[HAND_CTRL_START:HAND_CTRL_START+7] = finger_ctrl
 
-        # adhesion control
-        adhesion_val = 1.0 if want_grip else 0.0
-        for aid in adhesion_act_ids:
-            data.ctrl[aid] = adhesion_val
-
-        # simulate
+        # Simulate substeps
         for _ in range(SUBSTEPS):
             freeze_robot()
             for qa, v in zip(arm_qa, arm_q):
                 data.qpos[qa] = v
             for da in arm_da:
                 data.qvel[da] = 0
-            # Substep: same pin logic as outer loop
-            if p < 0.88:
-                data.qpos[pick_qa] = target[0]
-                data.qpos[pick_qa + 1] = target[1]
-                data.qvel[pick_da] = 0
-                data.qvel[pick_da + 1] = 0
-            else:
-                data.qpos[pick_qa] = place_xy[0]
-                data.qpos[pick_qa + 1] = place_xy[1]
-                data.qpos[pick_qa + 2] = place_z
-                data.qvel[pick_da:pick_da + 6] = 0
+
+            # Pin support block at its resting position (stationary target)
             if support_nm is not None:
                 data.qpos[supp_qa] = desired_support_xy[0]
                 data.qpos[supp_qa + 1] = desired_support_xy[1]
                 data.qpos[supp_qa + 2] = G1_TABLE_HEIGHT + BLOCK_HALF
+                data.qpos[supp_qa + 3:supp_qa + 7] = [1, 0, 0, 0]
                 data.qvel[supp_da:supp_da + 6] = 0
+
+            # Post-release: pin placed block at stack position permanently
+            if placed_jnt_adr is not None:
+                data.qpos[placed_jnt_adr:placed_jnt_adr+3] = placed_pos
+                data.qpos[placed_jnt_adr+3:placed_jnt_adr+7] = [1, 0, 0, 0]
+                data.qvel[placed_dof_adr:placed_dof_adr+6] = 0
+
+            # Kinematic block attachment: block tracks palm with smooth onset
+            if grasped_jnt_adr is not None:
+                pc_sub = palm_center(model, data)
+                target_pos = pc_sub + grasp_offset
+                # Smooth blend over BLEND_FRAMES
+                blend_t = min(1.0, grasp_age / BLEND_FRAMES)
+                blend_t = blend_t * blend_t * (3 - 2 * blend_t)  # smoothstep
+                blended_pos = np.array([
+                    grasp_start_pos[0] * (1 - blend_t) + target_pos[0] * blend_t,
+                    grasp_start_pos[1] * (1 - blend_t) + target_pos[1] * blend_t,
+                    max(grasp_start_pos[2], target_pos[2])  # Z always goes UP
+                ])
+                data.qpos[grasped_jnt_adr:grasped_jnt_adr+3] = blended_pos
+                data.qpos[grasped_jnt_adr+3:grasped_jnt_adr+7] = grasp_quat
+                # Zero velocity so physics doesn't fight the kinematic hold
+                jnt_idx = obj_jids[obj_names.index(grasped_obj)]
+                dof_adr = model.jnt_dofadr[jnt_idx]
+                data.qvel[dof_adr:dof_adr+6] = 0
+
             data.ctrl[HAND_CTRL_START:HAND_CTRL_START+7] = finger_ctrl
-            for aid in adhesion_act_ids:
-                data.ctrl[aid] = adhesion_val
             mujoco.mj_step(model, data)
+
+        # Decrement post-release settle countdown
+        if placed_countdown > 0:
+            placed_countdown -= 1
 
         renderer.update_scene(data, camera="front")
         Image.fromarray(renderer.render()).save(fd / f"frame_{i:04d}.png")
 
         if i % 10 == 0:
             pc = palm_center(model, data)
-            contacts = 0
-            # Per-block contact sets for v10 targeting check
-            block_geom_sets_v10 = {}
-            for nm_v10 in obj_names:
-                bid_v10 = jid(model, nm_v10, mujoco.mjtObj.mjOBJ_BODY)
-                block_geom_sets_v10[nm_v10] = {gi for gi in range(model.ngeom) if model.geom_bodyid[gi] == bid_v10}
-            per_block_contacts = {nm_v10: 0 for nm_v10 in obj_names}
-            for c in range(data.ncon):
-                g1, g2 = data.contact[c].geom1, data.contact[c].geom2
-                if (g1 in hand_geom_ids and g2 in block_geom_ids) or \
-                   (g1 in block_geom_ids and g2 in hand_geom_ids):
-                    contacts += 1
-                    for nm_v10 in obj_names:
-                        if g2 in block_geom_sets_v10[nm_v10] or g1 in block_geom_sets_v10[nm_v10]:
-                            per_block_contacts[nm_v10] += 1
-                # Debug: print any contact involving blocks during grip
-                if want_grip and (g1 in block_geom_ids or g2 in block_geom_ids):
-                    n1 = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, g1) or f"g{g1}"
-                    n2 = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, g2) or f"g{g2}"
-                    b1 = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, model.geom_bodyid[g1]) or "?"
-                    b2 = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, model.geom_bodyid[g2]) or "?"
-                    print(f"  CONTACT: {n1}({b1}) <-> {n2}({b2}) dist={data.contact[c].dist:.4f}")
             block_zs = {nm: data.qpos[obj_qadr[obj_names.index(nm)]+2] for nm in obj_names}
-            pc = palm_center(model, data)
-            # Distance from palm to each block
             block_dists = {}
             for nm in obj_names:
                 bi = obj_names.index(nm)
                 bpos = data.qpos[obj_qadr[bi]:obj_qadr[bi]+3]
                 block_dists[nm] = np.linalg.norm(pc - bpos)
-            if want_grip and i % 10 == 0:
-                for nm in obj_names:
-                    bi = obj_names.index(nm)
-                    bpos = data.qpos[obj_qadr[bi]:obj_qadr[bi]+3]
-                    print(f"  {nm} pos={bpos.round(4)}")
-            cstr = " ".join(f"{k}:{v}" for k,v in per_block_contacts.items())
-            print(f"F{i:03d} p={p:.2f} grip={want_grip} adh={adhesion_val:.0f} contacts={contacts}[{cstr}] palm={pc.round(3)} dists={{{', '.join(f'{k}:{v:.3f}' for k,v in block_dists.items())}}} block_z={{{', '.join(f'{k}:{v:.3f}' for k,v in block_zs.items())}}}")
+            attached = grasped_obj or "none"
+            print(f"F{i:03d} p={p:.2f} grip={want_grip} attached={attached} palm={pc.round(3)} "
+                  f"dists={{{', '.join(f'{k}:{v:.3f}' for k,v in block_dists.items())}}} "
+                  f"block_z={{{', '.join(f'{k}:{v:.3f}' for k,v in block_zs.items())}}}")
 
     for nm, qa in zip(obj_names, obj_qadr):
         pos = data.qpos[qa:qa+3]
