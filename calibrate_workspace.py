@@ -132,10 +132,31 @@ def calibrate_session(session_name, wrist_dir=None, det_dir=None):
     offset = obj_centroid_sim - grasp_centroid
     wrist_sim = wrist_sim_axes + offset
 
+    # --- Pass 2: Refine centroid using proximity-filtered grasping frames ---
+    # After rough alignment, keep only grasping frames where wrist is within
+    # CALIB_PROXIMITY of an object. Recompute centroid from those frames only.
+    CALIB_PROXIMITY = 0.20  # 20cm
+    near_object_frames = []
+    for i in grasp_frames:
+        min_dist = min(np.linalg.norm(wrist_sim[i, :2] - obj[:2]) for obj in objs_sim)
+        if min_dist < CALIB_PROXIMITY:
+            near_object_frames.append(i)
+
+    if len(near_object_frames) >= 10:
+        refined_centroid = wrist_sim_axes[near_object_frames].mean(axis=0)
+        refined_offset = obj_centroid_sim - refined_centroid
+        centroid_shift = refined_offset - offset
+        wrist_sim = wrist_sim_axes + refined_offset
+        print(f"  Pass 2 refinement: {len(near_object_frames)}/{len(grasp_frames)} frames within {CALIB_PROXIMITY}m")
+        print(f"  Refined centroid shift: ({centroid_shift[0]:.3f}, {centroid_shift[1]:.3f}, {centroid_shift[2]:.3f})")
+        offset = refined_offset
+    else:
+        print(f"  Pass 2: only {len(near_object_frames)} frames near objects — keeping pass 1 result")
+
     print(f"\n  Transform:")
     print(f"    Axis swap: R3D(X,Y,Z) → sim(-Z,-X,Y)")
     print(f"    Scale: {scale:.3f}")
-    print(f"    Anchor: grasp_centroid")
+    print(f"    Anchor: grasp_centroid (2-pass refined)" if len(near_object_frames) >= 10 else f"    Anchor: grasp_centroid")
     print(f"    Offset: ({offset[0]:.3f}, {offset[1]:.3f}, {offset[2]:.3f})")
 
     # --- Z correction: force objects to table height ---
