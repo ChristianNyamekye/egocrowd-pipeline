@@ -19,6 +19,7 @@ import numpy as np
 from pathlib import Path
 
 from pipeline_config import CALIB_DIR, OBJECT_DET_DIR
+from trim_trajectory import clean_grasping_signal
 
 WRIST_DIR = CALIB_DIR
 DET_DIR = OBJECT_DET_DIR
@@ -109,6 +110,13 @@ def calibrate_session(session_name, wrist_dir=None, det_dir=None):
 
     # --- Scale = 1.0 (R3D is physical meters from Apple LiDAR) ---
     scale = 1.0
+
+    # --- Clean grasping signal: debounce + onset detection ---
+    # Proximity gate not possible here (objects not aligned yet), but
+    # debounce + onset removes early-trajectory false positives
+    grasping_arr = np.array(grasping, dtype=float)
+    grasping_arr = clean_grasping_signal(grasping_arr)
+    grasping = grasping_arr.tolist()
 
     # --- Anchor via grasp centroid ---
     grasp_frames = [i for i, g in enumerate(grasping) if g]
