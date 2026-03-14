@@ -13,19 +13,21 @@ app = modal.App("flexa-hamer")
 
 hamer_image = (
     modal.Image.debian_slim(python_version="3.10")
-    .apt_install("git", "libgl1-mesa-glx", "libglib2.0-0", "unzip")
+    .apt_install("git", "libgl1-mesa-glx", "libglib2.0-0", "unzip", "wget")
     .pip_install(
         "torch==2.4.0", "torchvision==0.19.0",
         "transformers>=4.36.0",
         "numpy<2", "Pillow", "opencv-python-headless",
         "smplx==0.1.28", "timm", "einops",
         "yacs", "chumpy", "gdown",
+        "scikit-image", "pytorch-lightning",
     )
-    # Attempt HaMeR install with --no-deps to avoid pulling mmcv transitively.
-    # If this layer fails, the image build will use detection-only mode at runtime.
+    # Clone HaMeR with submodules (includes ViTPose) and install both packages.
+    # --no-deps avoids pulling mmcv/detectron2 transitively. No || echo -- fail loudly.
     .run_commands(
-        "pip install --no-deps git+https://github.com/geopavlakos/hamer.git || "
-        "echo 'WARN: HaMeR pip install failed -- will use detection-only mode'"
+        "git clone --recursive https://github.com/geopavlakos/hamer.git /opt/hamer && "
+        "pip install --no-deps -e /opt/hamer && "
+        "pip install --no-deps -e /opt/hamer/third-party/ViTPose"
     )
     # Provision MANO model files (required by HaMeR for 3D hand mesh recovery)
     .add_local_file(
@@ -47,14 +49,17 @@ hamer_image = (
         "AutoModelForZeroShotObjectDetection.from_pretrained('IDEA-Research/grounding-dino-tiny')"
         "\""
     )
-    # Download HaMeR checkpoints (ViTPose + HaMeR model weights)
+    # Download actual HaMeR + ViTPose checkpoints (hamer_demo_data.tar.gz ~500MB)
     .run_commands(
-        "python -c \""
-        "import gdown, os; "
-        "os.makedirs('/root/_DATA/hamer_ckpts/checkpoints', exist_ok=True); "
-        "os.makedirs('/root/_DATA/vitpose_ckpts', exist_ok=True); "
-        "\" || echo 'Checkpoint dirs created'"
+        "cd /root && "
+        "wget -q https://www.cs.utexas.edu/~pavlakos/hamer/data/hamer_demo_data.tar.gz && "
+        "tar --warning=no-unknown-keyword --exclude='.*' -xf hamer_demo_data.tar.gz && "
+        "mv _DATA/* /root/_DATA/ || true && "
+        "rm -f hamer_demo_data.tar.gz && "
+        "ls -la /root/_DATA/hamer_ckpts/checkpoints/ && "
+        "ls -la /root/_DATA/vitpose_ckpts/"
     )
+    .env({"CACHE_DIR_HAMER": "/root/_DATA"})
     .workdir("/root")
 )
 
@@ -111,13 +116,21 @@ def _box_center(box):
 def _try_load_hamer():
     """Attempt to load HaMeR model. Returns (model, model_cfg) or (None, None)."""
     try:
-        from hamer.configs import CACHE_DIR_HAMER  # noqa: F401
+        import os
+        import hamer.configs
+        # Override CACHE_DIR_HAMER so HaMeR finds checkpoints at /root/_DATA
+        hamer.configs.CACHE_DIR_HAMER = os.environ.get("CACHE_DIR_HAMER", "/root/_DATA")
         from hamer.models import load_hamer, DEFAULT_CHECKPOINT
-        model, model_cfg = load_hamer(DEFAULT_CHECKPOINT)
+        ckpt_path = f"{hamer.configs.CACHE_DIR_HAMER}/hamer_ckpts/checkpoints/hamer.ckpt"
+        print(f"Loading HaMeR checkpoint from: {ckpt_path}")
+        print(f"  Checkpoint exists: {os.path.exists(ckpt_path)}")
+        model, model_cfg = load_hamer(ckpt_path)
         model = model.cuda().eval()
         return model, model_cfg
     except Exception as e:
         print(f"HaMeR load failed: {e}")
+        import traceback
+        traceback.print_exc()
         print("Falling back to GroundingDINO detection-only mode")
         return None, None
 
