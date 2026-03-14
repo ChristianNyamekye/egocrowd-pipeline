@@ -316,7 +316,7 @@ def render_task(task_name: str):
     placed_dof_adr = None
     placed_pos = None
     placed_countdown = 0
-    SETTLE_FRAMES = 50  # pin through hand retreat to prevent finger-block collision bounce
+    SETTLE_FRAMES = n  # pin through end of trajectory to prevent finger-block collision bounce
 
     print(f"\nTrajectory: {n} frames, grip [{ls},{le}], pick={pick_nm}, support={support_nm}")
 
