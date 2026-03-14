@@ -196,14 +196,14 @@ def _estimate_grasping_from_joints(joints_3d):
     """Estimate grasping from thumb-index tip distance (MANO joint order).
 
     Joint 4 = thumb tip, Joint 8 = index finger tip.
-    Threshold: 0.04m (4cm) in camera-frame meters.
+    Threshold: 0.02m (2cm) in camera-frame meters.
     """
     import numpy as np
     joints = np.array(joints_3d)
     thumb_tip = joints[4]
     index_tip = joints[8]
     dist = float(np.linalg.norm(thumb_tip - index_tip))
-    return dist < 0.04
+    return dist < 0.02
 
 
 def _estimate_grasping_from_box(box, score):
