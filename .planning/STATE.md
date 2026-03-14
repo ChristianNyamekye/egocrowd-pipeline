@@ -4,7 +4,7 @@ milestone: v0.3
 milestone_name: milestone
 status: verifying
 last_updated: "2026-03-14T15:00:00Z"
-last_activity: 2026-03-14 — Completed quick task 15: Sim-side proximity gate — close fingers only when palm < 5cm from block
+last_activity: 2026-03-14 — Completed quick task 16: Re-run pipeline+sim with dual proximity gates — STACKED=False, IK bottleneck (RMS=0.099m)
 progress:
   total_phases: 3
   completed_phases: 3
@@ -36,6 +36,7 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 - [x] QT-013: Proximity-gated grasping — only flag grip when wrist < 15cm from object
 - [x] QT-014: Re-run pipeline with proximity gating — STACKED=False, grasping 66%->17%, IK bottleneck
 - [x] QT-015: Sim-side proximity gate — close fingers only when palm < 5cm from block
+- [x] QT-016: Re-run pipeline+sim with dual proximity gates — STACKED=False, IK bottleneck (RMS=0.099m)
 
 ### Quick Tasks Completed
 
@@ -56,13 +57,14 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 | 13 | Proximity-gated grasping — wrist < 15cm from object | 2026-03-14 | c8cb2b2 | [13-proximity-gated-grasping-only-flag-grip-](./quick/13-proximity-gated-grasping-only-flag-grip-/) |
 | 14 | Re-run pipeline — grasping 66%->17%, STACKED=False (IK bottleneck) | 2026-03-14 | — | [14-re-run-pipeline-with-proximity-gated-gra](./quick/14-re-run-pipeline-with-proximity-gated-gra/) |
 | 15 | Sim-side proximity gate — close fingers only when palm < 5cm | 2026-03-14 | 5fc98f7 | [15-sim-side-proximity-gate-close-fingers-on](./quick/15-sim-side-proximity-gate-close-fingers-on/) |
+| 16 | Re-run pipeline+sim with dual proximity gates — STACKED=False (IK bottleneck) | 2026-03-14 | — | [16-re-run-pipeline-and-sim-with-dual-proxim](./quick/16-re-run-pipeline-and-sim-with-dual-proxim/) |
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-03-14)
 
 **Core value:** The robot must faithfully reproduce the human's actual hand motion — true retargeting, not choreographed animation.
-**Current focus:** Sim-side proximity gate added (QT-015): fingers only close when palm < 5cm from block. Combined with trajectory-side gate (QT-013, 15cm). STACKED=False persists — need pipeline re-run to verify gate effect + IK improvement (RMS=0.099m).
+**Current focus:** Dual proximity gates verified (QT-016): trajectory-side 15cm + sim-side 5cm both working correctly. Grasping reduced to 17% (was 90%). STACKED=False persists — **IK/calibration is the bottleneck** (RMS=0.099m, 42% IK failures, 39% clamped). Palm never reaches < 5cm from block. Next: fix calibration/IK.
 
 ## Accumulated Context
 
