@@ -346,8 +346,12 @@ renderer = mujoco.Renderer(model, RENDER_H, RENDER_W)
         arm_q = ik_solve(model, data, target, arm_qa, arm_da)
         last_arm_q = arm_q.copy()
 
-        # --- Kinematic block attachment logic (Franka v9 pattern) ---
+        # --- RET-01/RET-03: Track palm position and check IK convergence ---
         pc = palm_center(model, data)
+        palm_positions.append(pc.copy())
+        ik_err = np.linalg.norm(target - pc)
+        if ik_err > 0.02:  # 2cm convergence threshold
+            ik_failures.append((i, float(ik_err)))
 
         # ATTACH: when want_grip=True and palm is close enough to a block
         if want_grip and grasped_obj is None:
@@ -472,6 +476,34 @@ renderer = mujoco.Renderer(model, RENDER_H, RENDER_W)
             print(f"F{i:03d} p={p:.2f} grip={want_grip} attached={attached} palm={pc.round(3)} "
                   f"dists={{{', '.join(f'{k}:{v:.3f}' for k,v in block_dists.items())}}} "
                   f"block_z={{{', '.join(f'{k}:{v:.3f}' for k,v in block_zs.items())}}}")
+
+    # === RET-01: Compute RMS tracking error ===
+    palm_arr = np.array(palm_positions)
+    target_arr = np.clip(wrist.copy(), WORKSPACE_MIN, WORKSPACE_MAX)
+    target_arr[:, 2] = np.maximum(target_arr[:, 2], G1_TABLE_HEIGHT + 0.02)
+    tracking_errors = np.linalg.norm(palm_arr - target_arr, axis=1)
+    rms_err = float(np.sqrt(np.mean(tracking_errors**2)))
+    mean_err = float(np.mean(tracking_errors))
+    max_err = float(np.max(tracking_errors))
+    print(f"\n  RET-01 Tracking: RMS={rms_err:.4f}m mean={mean_err:.4f}m max={max_err:.4f}m")
+    if rms_err < 0.05:
+        print(f"  RET-01 PASS: RMS error {rms_err:.4f}m < 0.05m threshold")
+    else:
+        print(f"  RET-01 WARNING: RMS error {rms_err:.4f}m exceeds 0.05m threshold")
+
+    # === RET-03: Log clamping and convergence stats ===
+    if n_clamped > 0:
+        print(f"  RET-03 Clamping: {n_clamped}/{n} frames clamped to workspace envelope")
+    else:
+        print(f"  RET-03 Clamping: 0/{n} frames clamped (all targets within workspace)")
+    if ik_failures:
+        print(f"  RET-03 IK failures: {len(ik_failures)}/{n} frames with >2cm error")
+        for frame, err in ik_failures[:5]:
+            print(f"    Frame {frame:03d}: err={err:.4f}m")
+        if len(ik_failures) > 5:
+            print(f"    ... and {len(ik_failures)-5} more")
+    else:
+        print(f"  RET-03 IK failures: 0/{n} frames (all converged within 2cm)")
 
     for nm, qa in zip(obj_names, obj_qadr):
         pos = data.qpos[qa:qa+3]
