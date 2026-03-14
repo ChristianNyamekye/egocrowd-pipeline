@@ -6,6 +6,8 @@ import json, sys
 import numpy as np
 from pathlib import Path
 import zipfile, io
+from scipy.interpolate import CubicSpline, PchipInterpolator
+from scipy.signal import savgol_filter
 
 RAW = Path(__file__).resolve().parent / "raw_captures"
 RETARGET = Path(__file__).resolve().parent / "gpu_retargeted"
@@ -66,23 +68,86 @@ def pixel_to_world(u, v, depth_map, meta, r3d_frame):
     return point_world
 
 
-def smooth_trajectory(traj, alpha=0.15):
-    """Bidirectional EMA smoothing (zero-lag)."""
-    n = len(traj)
-    if n < 3: return traj
-    arr = np.array(traj)
-    # Forward pass
-    fwd = np.zeros_like(arr)
-    fwd[0] = arr[0]
-    for i in range(1, n):
-        fwd[i] = alpha * arr[i] + (1 - alpha) * fwd[i-1]
-    # Backward pass
-    bwd = np.zeros_like(arr)
-    bwd[-1] = arr[-1]
-    for i in range(n-2, -1, -1):
-        bwd[i] = alpha * arr[i] + (1 - alpha) * bwd[i+1]
-    # Average
-    return ((fwd + bwd) / 2).tolist()
+def _find_gaps(nan_mask):
+    """Find contiguous NaN gap regions. Returns list of (start, end) index tuples."""
+    gaps = []
+    in_gap = False
+    start = 0
+    for i, is_nan in enumerate(nan_mask):
+        if is_nan and not in_gap:
+            start = i
+            in_gap = True
+        elif not is_nan and in_gap:
+            gaps.append((start, i))
+            in_gap = False
+    if in_gap:
+        gaps.append((start, len(nan_mask)))
+    return gaps
+
+
+def interpolate_gaps(arr):
+    """Gap-length-aware interpolation for [N,3] trajectory.
+
+    Strategy per gap length:
+    - Short gaps (<= 15 frames): CubicSpline (C2 smooth, best for short spans)
+    - Medium gaps (16-30 frames): PCHIP (monotonic, no overshoot)
+    - Long gaps (> 30 frames): Linear (safe, no wild oscillations)
+
+    Applied per-axis independently. All valid points are used to fit the
+    interpolator, giving global context even for local gap fills.
+    """
+    result = arr.copy()
+    for ax in range(3):
+        col = result[:, ax]
+        valid_mask = ~np.isnan(col)
+        if valid_mask.all() or not valid_mask.any():
+            continue
+
+        valid_idx = np.where(valid_mask)[0]
+        valid_vals = col[valid_mask]
+
+        # Identify each contiguous NaN gap
+        nan_mask = np.isnan(col)
+        gaps = _find_gaps(nan_mask)
+
+        for gap_start, gap_end in gaps:
+            gap_len = gap_end - gap_start
+            gap_indices = np.arange(gap_start, gap_end)
+
+            # Need at least 2 valid points for any interpolation
+            if len(valid_idx) < 2:
+                col[gap_indices] = valid_vals[0] if len(valid_vals) > 0 else 0.0
+                continue
+
+            if gap_len <= 15:
+                # CubicSpline: C2 continuous, smooth acceleration
+                interp = CubicSpline(valid_idx, valid_vals)
+                col[gap_indices] = interp(gap_indices)
+            elif gap_len <= 30:
+                # PCHIP: C1 continuous, monotonicity-preserving, no overshoot
+                interp = PchipInterpolator(valid_idx, valid_vals)
+                col[gap_indices] = interp(gap_indices)
+            else:
+                # Linear: safe for long gaps (e.g., 138-frame gap)
+                col[gap_indices] = np.interp(gap_indices, valid_idx, valid_vals)
+
+    return result
+
+
+def smooth_trajectory_savgol(traj, window_length=7, polyorder=3):
+    """Savitzky-Golay smoothing for [N,3] trajectory.
+
+    Zero-phase (no lag in batch mode). Preserves trajectory shape and
+    grasp dwell positions better than bidirectional EMA.
+
+    Parameters:
+    - window_length=7: 0.7s at 10 FPS. Conservative — preserves dwell.
+    - polyorder=3: Cubic — preserves velocity and acceleration shape.
+    - mode='nearest': Repeats edge value for endpoint handling.
+    """
+    if len(traj) < window_length:
+        return traj.copy() if isinstance(traj, np.ndarray) else np.array(traj)
+    return savgol_filter(traj, window_length, polyorder, axis=0, mode='nearest')
 
 
 def process_session(session):
@@ -142,25 +207,31 @@ def process_session(session):
     valid = sum(1 for w in wrist_3d_world if w is not None)
     print(f"  Reconstructed: {valid}/{len(ts)} frames ({failed} failed)")
 
-    # Fill gaps with linear interpolation
+    # Convert to array with NaN for missing frames
     arr = []
     for w in wrist_3d_world:
         arr.append(w if w is not None else [np.nan, np.nan, np.nan])
-    arr = np.array(arr)
+    arr = np.array(arr, dtype=float)
 
-    # Interpolate NaN gaps
-    for ax in range(3):
-        col = arr[:, ax]
-        nans = np.isnan(col)
-        if nans.all(): continue
-        good = ~nans
-        indices = np.arange(len(col))
-        col[nans] = np.interp(indices[nans], indices[good], col[good])
-        arr[:, ax] = col
+    # TRK-01: Gap-length-aware interpolation (cubic < 15, PCHIP 15-30, linear > 30)
+    interpolated = interpolate_gaps(arr)
+    assert not np.isnan(interpolated).any(), "NaN gaps remain after interpolation"
 
-    # Smooth
-    smoothed = smooth_trajectory(arr.tolist(), alpha=0.12)
-    smoothed = np.array(smoothed)
+    # TRK-02: Savitzky-Golay spatial filter (zero-phase, preserves grasp dwell)
+    smoothed = smooth_trajectory_savgol(interpolated, window_length=7, polyorder=3)
+    assert not np.isnan(smoothed).any(), "NaN values after smoothing"
+
+    # Validate: check for large jumps
+    disps = np.linalg.norm(np.diff(smoothed, axis=0), axis=1)
+    max_jump = disps.max()
+    n_large_jumps = (disps > 0.03).sum()
+    if n_large_jumps > 0:
+        print(f"  WARNING: {n_large_jumps} frames with >3cm jump (max={max_jump:.4f}m)")
+
+    # TRK-03: Verify grasping signal remains binary
+    unique_grasp = set(np.unique(np.array(grasping, dtype=float)).tolist())
+    assert unique_grasp.issubset({0.0, 1.0}), \
+        f"Grasping signal corrupted: unique values = {unique_grasp}"
 
     # Stats
     print(f"  World coords range:")
