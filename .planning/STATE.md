@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: verifying
-last_updated: "2026-03-14T12:30:00Z"
-last_activity: 2026-03-14 — Completed quick task 3: End-to-end HaMeR pipeline test on stack2
+last_updated: "2026-03-14T14:00:00Z"
+last_activity: 2026-03-14 — Completed quick task 4: Replace kinematic attachment with physics-based grasping
 progress:
   total_phases: 3
   completed_phases: 3
@@ -24,6 +24,7 @@ Last activity: 2026-03-14 — Completed quick task 2: Build Pinocchio-based traj
 - [x] QT-001: Automate session progress capture to Obsidian (vault-capture.sh)
 - [x] QT-002: Build Pinocchio-based trajectory validator
 - [x] QT-003: End-to-end HaMeR pipeline test on stack2
+- [x] QT-004: Replace kinematic attachment with physics-based grasping
 
 ### Quick Tasks Completed
 
@@ -32,6 +33,7 @@ Last activity: 2026-03-14 — Completed quick task 2: Build Pinocchio-based traj
 | 1 | Automate session progress capture to Obsidian | 2026-03-14 | 6a04467 | [1-vault-capture](./quick/1-vault-capture/) |
 | 2 | Build Pinocchio-based trajectory validator | 2026-03-14 | 73ff194 | [2-build-pinocchio-based-trajectory-validat](./quick/2-build-pinocchio-based-trajectory-validat/) |
 | 3 | End-to-end HaMeR pipeline test on stack2 | 2026-03-14 | 98f60a5 | [3-end-to-end-hamer-pipeline-test-on-stack2](./quick/3-end-to-end-hamer-pipeline-test-on-stack2/) |
+| 4 | Replace kinematic attachment with physics-based grasping | 2026-03-14 | 4e94895 | [4-replace-kinematic-attachment-with-physic](./quick/4-replace-kinematic-attachment-with-physic/) |
 
 ## Project Reference
 
