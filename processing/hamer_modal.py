@@ -13,8 +13,7 @@ app = modal.App("flexa-hamer")
 
 hamer_image = (
     modal.Image.debian_slim(python_version="3.10")
-    .apt_install("git", "libgl1-mesa-glx", "libglib2.0-0", "libegl1-mesa-dev",
-                 "unzip", "wget")
+    .apt_install("git", "libgl1-mesa-glx", "libglib2.0-0", "unzip", "wget")
     .pip_install(
         "torch==2.4.0", "torchvision==0.19.0",
         "transformers>=4.36.0",
@@ -22,7 +21,7 @@ hamer_image = (
         "smplx==0.1.28", "timm", "einops",
         "yacs", "chumpy", "gdown",
         "scikit-image", "pytorch-lightning",
-        "pyrender==0.1.45", "trimesh", "PyOpenGL", "pyglet<2",
+        # pyrender/trimesh NOT needed -- renderer is stubbed out for inference
     )
     # Clone HaMeR with submodules (includes ViTPose) and install both packages.
     # --no-deps avoids pulling mmcv/detectron2 transitively. No || echo -- fail loudly.
@@ -61,7 +60,7 @@ hamer_image = (
         "ls -la /root/_DATA/hamer_ckpts/checkpoints/ && "
         "ls -la /root/_DATA/vitpose_ckpts/"
     )
-    .env({"CACHE_DIR_HAMER": "/root/_DATA", "PYOPENGL_PLATFORM": "egl"})
+    .env({"CACHE_DIR_HAMER": "/root/_DATA"})
     .workdir("/root")
 )
 
@@ -119,9 +118,42 @@ def _try_load_hamer():
     """Attempt to load HaMeR model. Returns (model, model_cfg) or (None, None)."""
     try:
         import os
+        import sys
+        import types
+
+        # Stub out pyrender before any HaMeR import -- pyrender requires a
+        # display server (X11/pyglet) that isn't available in headless Modal
+        # containers. We only need the model for inference, not the renderer.
+        #
+        # HaMeR import chain:
+        #   hamer.models -> hamer.utils -> renderer.py (import pyrender FAILS)
+        #                               -> mesh_renderer.py (import pyrender)
+        #                               -> skeleton_renderer.py (import trimesh)
+        #
+        # We stub the three renderer submodules so hamer.utils.__init__.py's
+        #   from .renderer import Renderer
+        #   from .mesh_renderer import MeshRenderer
+        #   from .skeleton_renderer import SkeletonRenderer
+        # all succeed without touching pyrender/pyglet.
+        for mod_name in ("pyrender", "pyrender.constants"):
+            if mod_name not in sys.modules:
+                sys.modules[mod_name] = types.ModuleType(mod_name)
+
+        renderer_stubs = {
+            "hamer.utils.renderer": {"Renderer": None},
+            "hamer.utils.mesh_renderer": {"MeshRenderer": None},
+            "hamer.utils.skeleton_renderer": {"SkeletonRenderer": None},
+        }
+        for mod_path, attrs in renderer_stubs.items():
+            stub = types.ModuleType(mod_path)
+            for k, v in attrs.items():
+                setattr(stub, k, v)
+            sys.modules[mod_path] = stub
+
         import hamer.configs
         # Override CACHE_DIR_HAMER so HaMeR finds checkpoints at /root/_DATA
         hamer.configs.CACHE_DIR_HAMER = os.environ.get("CACHE_DIR_HAMER", "/root/_DATA")
+
         from hamer.models import load_hamer, DEFAULT_CHECKPOINT
         ckpt_path = f"{hamer.configs.CACHE_DIR_HAMER}/hamer_ckpts/checkpoints/hamer.ckpt"
         print(f"Loading HaMeR checkpoint from: {ckpt_path}")
