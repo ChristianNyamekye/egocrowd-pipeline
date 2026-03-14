@@ -25,6 +25,7 @@ Last activity: 2026-03-14 — Completed quick task 4: Physics-based grasping (ST
 - [x] QT-002: Build Pinocchio-based trajectory validator
 - [x] QT-003: End-to-end HaMeR pipeline test on stack2
 - [x] QT-004: Replace kinematic attachment with physics-based grasping
+- [x] QT-005: Fix HaMeR mesh model loading on Modal
 
 ### Quick Tasks Completed
 
@@ -82,7 +83,9 @@ See: .planning/PROJECT.md (updated 2026-03-14)
   - Modal API updated: Function.lookup → Function.from_name (modal v1.3.5)
   - Detection threshold lowered from 0.2 → 0.15 (confidence values cluster around 0.20-0.21)
   - Grasping heuristic improved: aspect-ratio based (was box-area based)
-  - No wrist_3d_camera output yet (requires HaMeR model to load); falls back to depth unprojection
+  - HaMeR mesh recovery WORKING: 942/951 frames with wrist_3d_camera output
+  - Fixed: np.str dtype, dict input format, 256x256 crop, real checkpoints
+  - Calibration mismatch: HaMeR camera-frame coords map outside G1 workspace (needs calibration fix)
   - Pipeline completes all 7 stages with --hamer flag
   - Simulation renders successfully (robot grasps and moves block, STACKED=False)
 - Phase 3 plan 02 code complete: grasp visual quality
