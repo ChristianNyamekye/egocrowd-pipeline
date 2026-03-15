@@ -155,28 +155,121 @@ def render():
     d.qvel[m.jnt_dofadr[sup_jnt]:m.jnt_dofadr[sup_jnt]+6] = 0
     mujoco.mj_forward(m, d)
 
-    # Wrist trajectory mapping — use relative offsets centered on default hand positions
+    # Load 3D bimanual wrist trajectories (from LiDAR depth reprojection)
+    wrist3d = json.loads((Path(__file__).parent / "wrist_trajectories" / "stack2_bimanual_wrist3d.json").read_text())
+    left_w3d = [np.array(w) if w else None for w in wrist3d["left_wrist_3d"]]
+    right_w3d = [np.array(w) if w else None for w in wrist3d["right_wrist_3d"]]
+    print(f"3D wrists: left={wrist3d['valid_left']}, right={wrist3d['valid_right']}")
+
+    # Also load pixel data for fallback
+    gpu_hands = json.loads((Path(__file__).parent / "modal_results" / "stack2_gpu_hands.json").read_text())
+    
+    left_wp_list, right_wp_list = [], []
+    for r in gpu_hands["results"]:
+        lw, rw = None, None
+        for h in r.get("hands", []):
+            wp = h.get("wrist_pixel", [0, 0])
+            side = h.get("hand", "unknown")
+            if side == "left":
+                lw = wp
+            elif side == "right":
+                rw = wp
+            elif wp[0] > 480:  # right side of frame = left hand (egocentric)
+                lw = wp
+            else:
+                rw = wp
+        left_wp_list.append(lw)
+        right_wp_list.append(rw)
+    
+    # Convert pixel trajectories to robot workspace
+    # Image coords: x=[0,960], y=[0,720]
+    # Robot workspace: right hand x=[0.15,0.45], y=[-0.35,-0.05], z=[0.85,1.15]
+    #                  left hand  x=[0.15,0.45], y=[0.05,0.35], z=[0.85,1.15]
     rh_default = d.site_xpos[rh_sid].copy()
     lh_default = d.site_xpos[lh_sid].copy()
     print(f"RH default: {rh_default.round(3)}, LH default: {lh_default.round(3)}")
+    
+    # Fix wrist yaw — remove the 90° twist from keyframe
+    for jn in ["left_wrist_yaw", "right_wrist_yaw"]:
+        jid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, jn)
+        if jid >= 0:
+            qa = m.jnt_qposadr[jid]
+            d.qpos[qa] = 0.0
+            standing[qa] = 0.0
+    
+    img_w, img_h = 960, 720
+    arm_range = 0.15
 
-    ws = wrist.copy()
-    ws_mean = ws.mean(axis=0)
-    ws_centered = ws - ws_mean
-    ws_max_abs = np.max(np.abs(ws_centered), axis=0)
-    ws_max_abs[ws_max_abs < 0.01] = 1.0
-    arm_reach = 0.15
-    scale = arm_reach / ws_max_abs
+    # Smooth the wrist trajectories to remove jitter
+    def smooth_trajectory(wp_list, window=5):
+        result = []
+        for i in range(len(wp_list)):
+            neighbors = [wp_list[j] for j in range(max(0,i-window), min(len(wp_list),i+window+1)) if wp_list[j] is not None]
+            if neighbors:
+                result.append([np.mean([n[0] for n in neighbors]), np.mean([n[1] for n in neighbors])])
+            else:
+                result.append(None)
+        return result
+    
+    left_wp_smooth = smooth_trajectory(left_wp_list, window=3)
+    right_wp_smooth = smooth_trajectory(right_wp_list, window=3)
+
+    def pixel_to_robot_target(wp, hand_default, is_left):
+        if wp is None:
+            return hand_default.copy()
+        px, py = wp[0], wp[1]
+        # Normalize to [-0.5, 0.5] and CLAMP to prevent extreme arm positions
+        nx = np.clip((px / img_w - 0.5), -0.35, 0.35)
+        ny = np.clip((py / img_h - 0.5), -0.35, 0.35)
+        # Map to robot workspace offsets
+        # In egocentric view: image X maps to robot Y (lateral), image Y maps to robot Z (vertical, inverted)
+        offset_y = -nx * arm_range * 0.8  # damped lateral
+        offset_z = -ny * arm_range * 0.8  # damped vertical
+        offset_x = 0.0
+        if is_left:
+            offset_y = -offset_y
+        target = hand_default.copy()
+        target[1] += offset_y
+        target[2] += offset_z
+        return target
+
+    # Map 3D wrist positions to robot workspace
+    # The 3D wrist positions are in camera frame (X=right, Y=down, Z=forward)
+    # Robot frame: X=forward, Y=left, Z=up
+    # Need to normalize and map to reachable workspace
+
+    # Compute trajectory stats for normalization
+    l_valid = [w for w in left_w3d if w is not None]
+    r_valid = [w for w in right_w3d if w is not None]
+    l_arr = np.array(l_valid)
+    r_arr = np.array(r_valid)
+    
+    # Combined center and scale
+    all_valid = np.vstack([l_arr, r_arr]) if len(l_valid) and len(r_valid) else l_arr if len(l_valid) else r_arr
+    center = all_valid.mean(axis=0)
+    max_range = max(all_valid.max(axis=0) - all_valid.min(axis=0))
+    if max_range < 0.01: max_range = 1.0
+    arm_reach = 0.12  # conservative reach
+    
+    def wrist3d_to_robot(w3d, hand_default):
+        if w3d is None:
+            return hand_default.copy()
+        # Center and scale
+        rel = (w3d - center) / max_range * arm_reach
+        # Camera→Robot frame mapping: cam_X→robot_-Y, cam_Y→robot_-Z, cam_Z→robot_X
+        target = hand_default.copy()
+        target[0] += rel[2]   # depth (cam Z) → robot forward (X)
+        target[1] += -rel[0]  # cam right (X) → robot left (-Y)
+        target[2] += -rel[1]  # cam down (Y) → robot up (-Z)
+        return target
 
     def traj_to_target_r(idx):
-        offset = ws_centered[idx % n_traj] * scale
-        return rh_default + offset
+        w_idx = min(idx * 2, len(right_w3d) - 1)
+        return wrist3d_to_robot(right_w3d[w_idx], rh_default)
 
     def traj_to_target_l(idx):
-        # Mirror the trajectory for left hand (flip Y)
-        offset = ws_centered[idx % n_traj] * scale
-        offset[1] = -offset[1]  # mirror Y for left side
-        return lh_default + offset
+        w_idx = min(idx * 2, len(left_w3d) - 1)
+        return wrist3d_to_robot(left_w3d[w_idx], lh_default)
 
     # IK function
     jac = np.zeros((3, m.nv))
